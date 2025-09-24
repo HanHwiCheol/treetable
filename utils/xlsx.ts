@@ -15,7 +15,6 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
     if (/rev|revision|리비전/.test(s)) return "revision";
     if (/name|이름/.test(s)) return "name";
     if (/material|재질/.test(s)) return "material_code";
-    if (/weight|무게/.test(s)) return "weight";
     return null;
   };
 
@@ -41,7 +40,6 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
       revision: r.revision ? String(r.revision) : null,
       name: r.name ? String(r.name) : null,
       material_code: r.material_code ? String(r.material_code) : null,
-      weight: r.weight != null && r.weight !== "" ? Number(r.weight) : null,
       parent_line_no: r.parent_line_no != null ? String(r.parent_line_no) : null,
     };
   });

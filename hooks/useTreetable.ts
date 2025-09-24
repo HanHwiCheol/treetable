@@ -37,11 +37,28 @@ export function useTreetable(treetableId?: string, p0?: { ready: boolean; }) {
   );
 
   const onChangeCell = (idx: number, key: keyof NodeRow, value: any) => {
-    setRows((prev) => {
+    setRows(prev => {
       const next = [...prev];
       const r = { ...next[idx] };
-      if (key === "weight") r.weight = value === "" ? null : Number(value);
-      else (r as any)[key] = value === "" ? null : value;
+
+      if (key === "material_code") {
+        const m = materials.find(mm => mm.code === value);
+        r.material_code = value === "" ? null : value;
+        r.weight = m?.weight ?? null;
+        r.updated_at = new Date().toISOString();
+      } else if (key === "revision") {
+        // ✅ 리비전이 바뀌면 재질/무게 초기화 + 수정일 갱신
+        r.revision = value === "" ? null : value;
+        r.material_code = null;    // ← "선택" 상태
+        r.weight = null;           // 재질 초기화에 맞춰 무게도 비움
+        r.updated_at = new Date().toISOString();
+      } else if (key === "weight") {
+        const n = value === "" ? null : Number(value);
+        r.weight = Number.isFinite(n as number) ? (n as number) : null;
+      } else {
+        (r as any)[key] = value === "" ? null : value;
+      }
+
       next[idx] = r;
       return next;
     });

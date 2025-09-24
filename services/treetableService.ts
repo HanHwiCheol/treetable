@@ -12,7 +12,7 @@ const TBL = {
 export async function fetchMaterials(): Promise<Material[]> {
   const { data, error } = await supabase
     .from(TBL.materials)
-    .select("code,label,category")
+    .select("code,label,category,weight")
     .order("label", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Material[];
@@ -51,6 +51,26 @@ export async function deleteMissingNodes(treetableId: string, remainingIds: stri
   if (delErr) throw delErr;
 }
 
+export async function saveReview(treetableId: string, checklist: any) {
+  const { data: s } = await supabase.auth.getSession();
+  const reviewerId = s.session?.user?.id;
+  if (!reviewerId) throw new Error("로그인이 필요합니다.");
+
+  const { error } = await supabase
+    .from("treetable_reviews") // ✅ 스키마 포함
+    .upsert(
+      {
+        treetable_id: treetableId,     // ✅ not null
+        reviewer_id: reviewerId,       // RLS 정책 통과용
+        checklist,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "treetable_id" }   // ✅ 인덱스와 1:1 매칭
+    );
+
+  if (error) throw new Error(error.message);
+}
+
 /** 신규/수정 저장 (replace 모드: 사전 전체삭제 후 삽입) */
 export async function saveAllNodes(
   treetableId: string,
@@ -82,6 +102,8 @@ export async function saveAllNodes(
       name: r.name ?? null,
       material_code: r.material_code ?? null,
       weight: r.weight ?? null,
+      created_at: r.created_at ?? null,   // ✅ 추가
+      updated_at: r.updated_at ?? null,   // ✅ 추가
     }));
 
     const { data, error } = await supabase
@@ -113,6 +135,8 @@ export async function saveAllNodes(
       name: r.name ?? null,
       material_code: r.material_code ?? null,
       weight: r.weight ?? null,
+      created_at: r.created_at ?? null,   // ✅ 추가
+      updated_at: r.updated_at ?? null,   // ✅ 추가
     }));
     const { error } = await supabase.from(TBL.nodes).upsert(payload, { onConflict: "id" });
     if (error) throw error;

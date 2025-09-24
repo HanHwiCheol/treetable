@@ -1,5 +1,3 @@
-export type Material = { code: string; label: string; category: string };
-
 export type NodeRow = {
   // 로컬 표시/편집용
   _tmpId?: string;   // 신규/클라이언트 식별
@@ -16,4 +14,11 @@ export type NodeRow = {
   weight?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+export type Material = {
+  code: string;      // 예: "AL6061"
+  label: string;     // 예: "알루미늄 6061"
+  category: string;
+  weight: number | null;  // ✅ 추가 (재질별 기준 무게)
 };

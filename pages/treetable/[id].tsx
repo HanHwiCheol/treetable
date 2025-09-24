@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabaseClient";
 export default function TreetableDetail() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
+  
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) =>
@@ -46,15 +47,18 @@ export default function TreetableDetail() {
   if (loading) {
     return (
       <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
-        <h2>TreeTable 편집</h2>
+        <h2>BOM Table</h2>
         <p>불러오는 중...</p>
       </div>
     );
   }
 
-  return (
-    <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ marginBottom: 12 }}>TreeTable 편집</h1>
+return (
+  <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
+    <h1 style={{ marginBottom: 12 }}>BOM Table</h1>
+
+    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+      {/* 왼쪽: Toolbar (Excel Import + 목록으로 + 저장하기) */}
       <Toolbar
         onBack={() => router.push("/")}
         onSave={save}
@@ -62,21 +66,16 @@ export default function TreetableDetail() {
         importMode={importMode}
         setImportMode={setImportMode}
         onFile={onFile}
+        rows={rows as NodeRow[]}              // ✅ 추가
+        treetableId={treetableId as string}   // ✅ 추가
       />
-      <TreeGrid
-        rows={rows as NodeRow[]}
-        onChangeCell={onChangeCell}
-        materials={materials}   // ✅ 넘겨주기
-      />
-
-      <div style={{ marginTop: 16, color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
-        <p style={{ margin: 0 }}>
-          * 엑셀 헤더 예: <b>라인번호/line_no</b>, <b>부모라인/parent_line_no</b>, <b>품번/part_no</b>, <b>리비전/revision</b>, <b>이름/name</b>, <b>재질/material_code</b>, <b>무게/weight</b>
-        </p>
-        <p style={{ margin: 0 }}>
-          * <b>대체(replace)</b>: 기존 노드 삭제 후 교체. <b>추가(append)</b>: 기존 뒤에 이어붙임.
-        </p>
-      </div>
     </div>
-  );
+
+    <TreeGrid
+      rows={rows as NodeRow[]}
+      onChangeCell={onChangeCell}
+      materials={materials}
+    />
+  </div>
+);
 }

@@ -1,4 +1,6 @@
 import { CSSProperties } from "react";
+import { useRouter } from "next/router";
+import { NodeRow } from "@/types/treetable";
 
 export function Toolbar({
   onBack,
@@ -7,6 +9,8 @@ export function Toolbar({
   importMode,
   setImportMode,
   onFile,
+  rows,
+  treetableId,
 }: {
   onBack: () => void;
   onSave: () => void;
@@ -14,9 +18,18 @@ export function Toolbar({
   importMode: "replace" | "append";
   setImportMode: (m: "replace" | "append") => void;
   onFile: (f: File) => void;
+  rows: NodeRow[];
+  treetableId?: string | null;
 }) {
+  const router = useRouter();
+
+  // ✅ 재질이 모두 선택되었는지 검사
+  const allMaterialsChosen =
+    rows.length > 0 && rows.every((r) => !!(r.material_code && r.material_code !== ""));
+
   return (
     <div style={bar}>
+      {/* 왼쪽: Excel Import */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <label style={{ fontWeight: 600 }}>Excel Import</label>
         <select
@@ -38,12 +51,29 @@ export function Toolbar({
           style={{ border: "1px solid #e5e7eb", padding: 8, borderRadius: 8 }}
         />
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={onBack} style={btnGhost}>목록으로</button>
-        <button onClick={onSave} disabled={saving} style={btnPrimary}>
-          {saving ? "저장 중..." : "저장하기"}
-        </button>
-      </div>
+
+      {/* 오른쪽: 목록으로 | 저장하기(흰색) | 다음단계(흰색, 조건부 활성화) */}
+<div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+  <button onClick={onBack} style={btnGhost}>목록으로</button>
+  <button
+    onClick={onSave}
+    disabled={saving}
+    style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
+  >
+    {saving ? "저장 중..." : "저장하기"}
+  </button>
+  <button
+    onClick={() => router.push(`/treetable/${treetableId}/review`)}
+    disabled={!rows.length || !rows.every(r => !!r.material_code)}
+    style={{
+      ...btnGhost,
+      opacity: rows.length && rows.every(r => !!r.material_code) ? 1 : 0.5,
+      cursor: rows.length && rows.every(r => !!r.material_code) ? "pointer" : "not-allowed",
+    }}
+  >
+    다음단계
+  </button>
+</div>
     </div>
   );
 }
@@ -57,25 +87,22 @@ const bar: CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
+  flexWrap: "nowrap",
 };
+
 const selectBox: CSSProperties = {
   border: "1px solid #e5e7eb",
   borderRadius: 8,
   padding: "6px 8px",
   background: "white",
 };
-const btnPrimary: CSSProperties = {
+
+const btnGhost: CSSProperties = {
   padding: "10px 16px",
   borderRadius: 12,
-  border: "none",
-  cursor: "pointer",
-  fontWeight: 600,
-  background: "#111827",
-  color: "white",
-};
-const btnGhost: CSSProperties = {
-  ...btnPrimary,
-  background: "transparent",
-  color: "#111827",
   border: "1px solid #e5e7eb",
+  background: "white",        // ← 흰색 배경
+  color: "#111827",
+  fontWeight: 600,
+  cursor: "pointer",
 };
