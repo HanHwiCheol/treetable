@@ -43,12 +43,8 @@ export default function ReviewPage() {
         items: CHECK_ITEMS.map((label, i) => ({ label, checked: checked[i] })),
       });
       alert("체크리스트가 저장되었습니다.");
-    } catch (err: any) {
-      console.error("saveReview error:", err);
-      const msg =
-        err?.message ??
-        err?.error?.message ??
-        (typeof err === "string" ? err : JSON.stringify(err));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
       alert("저장 중 오류 발생:\n" + msg);
     }
   };

@@ -19,7 +19,7 @@ export function TreeGrid({
   materials,
 }: {
   rows: NodeRow[];
-  onChangeCell: (idx: number, key: keyof NodeRow, value: any) => void;
+  onChangeCell: (idx: number, key: keyof NodeRow, value: string | number | null) => void;
   materials: Material[];
 }) {
   return (

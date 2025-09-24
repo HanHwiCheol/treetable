@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
+import { Session } from "@supabase/supabase-js"; // ✅ 추가
 
 type TT = {
   id: string;
@@ -12,7 +13,7 @@ type TT = {
 
 export default function Home() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<TT[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);

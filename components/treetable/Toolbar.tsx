@@ -34,7 +34,7 @@ export function Toolbar({
         <label style={{ fontWeight: 600 }}>Excel Import</label>
         <select
           value={importMode}
-          onChange={(e) => setImportMode(e.target.value as any)}
+          onChange={(e) => setImportMode(e.target.value as "replace" | "append")}
           style={selectBox}
           title="replace: 기존 행 삭제 후 대체 / append: 뒤에 추가"
         >
@@ -44,7 +44,7 @@ export function Toolbar({
         <input
           type="file"
           accept=".xlsx,.xls"
-          onChange={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.[0];
             if (file) onFile(file);
           }}
@@ -53,28 +53,28 @@ export function Toolbar({
       </div>
 
       {/* 오른쪽: 목록으로 | 저장하기(흰색) | 다음단계(흰색, 조건부 활성화) */}
-<div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-  <button onClick={onBack} style={btnGhost}>목록으로</button>
-  <button
-    onClick={onSave}
-    disabled={saving}
-    style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
-  >
-    {saving ? "저장 중..." : "저장하기"}
-  </button>
-  <button
-    onClick={() => router.push(`/treetable/${treetableId}/review`)}
-    disabled={!rows.length || !rows.every(r => !!r.material_code)}
-    style={{
-      ...btnGhost,
-      opacity: rows.length && rows.every(r => !!r.material_code) ? 1 : 0.5,
-      cursor: rows.length && rows.every(r => !!r.material_code) ? "pointer" : "not-allowed",
-    }}
-  >
-    다음단계
-  </button>
-</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+      <button onClick={onBack} style={btnGhost}>목록으로</button>
+      <button
+        onClick={onSave}
+        disabled={saving}
+        style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
+      >
+        {saving ? "저장 중..." : "저장하기"}
+      </button>
+      <button
+        onClick={() => router.push(`/treetable/${treetableId}/review`)}
+        disabled={!rows.length || !rows.every(r => !!r.material_code)}
+        style={{
+          ...btnGhost,
+          opacity: rows.length && rows.every(r => !!r.material_code) ? 1 : 0.5,
+          cursor: rows.length && rows.every(r => !!r.material_code) ? "pointer" : "not-allowed",
+        }}
+      >
+        다음단계
+      </button>
     </div>
+  </div>
   );
 }
 
