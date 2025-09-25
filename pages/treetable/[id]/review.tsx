@@ -32,9 +32,16 @@ export default function ReviewPage() {
       return next;
     });
 
-  const handleExportBom = () => {
-    // TODO: 실제 “BOM 정보 추출” 로직 연결
-    alert("BOM 정보 추출을 실행합니다. (로직 연결 필요)");
+  const handleExportBom = async () => {
+    try {
+      // TODO: 실제 BOM 추출 로직 실행
+      // await exportBom(id!);
+
+      // 추출 끝나면 LCA 리포트 페이지로 이동
+      router.push(`/lca/${id}`);
+    } catch (e: any) {
+      alert("BOM 추출 중 오류: " + (e?.message ?? "unknown"));
+    }
   };
   
   const handleSave = async () => {

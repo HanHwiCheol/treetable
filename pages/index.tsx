@@ -134,7 +134,7 @@ export default function Home() {
   return (
     <div style={centerWrap}>
       <div style={card}>
-        <h2 style={{ marginBottom: 12 }}>내 TreeTable 선택</h2>
+        <h2 style={{ marginBottom: 12 }}>BOM Table 선택</h2>
         <select
           value={selectedId ?? ""}
           onChange={(e) => setSelectedId(e.target.value)}
