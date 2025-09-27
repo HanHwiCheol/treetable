@@ -4,17 +4,18 @@ import { useMemo, useState } from "react";
 import { saveReview } from "@/services/treetableService";
 
 const CHECK_ITEMS = [
-  "주요 부품의 재질/표면처리 스펙이 정의되었는가?",
-  "나사/삽입체 표준 부품 규격(규격번호, 재질, 강도 등)이 일치하는가?",
-  "체결 토크/접착/용접 등 접합 방식이 각 부품에 명시되었는가?",
-  "간섭/충돌(Clearance, Interference) 검토 및 치수공차가 합리적인가?",
-  "조립 순서/정렬 지그 없이 조립이 가능한 구조인가?",
-  "유지보수/분해 용이성(나사 접근성, 표준 공구 사용)이 확보되었는가?",
-  "안전/규정(모서리 R, 핀치포인트, 방열/통풍 등) 요구사항을 만족하는가?",
-  "원가/가공성(머시닝 방향, 금형 파팅라인, 최소 R/두께)이 고려되었는가?",
-  "강성/진동/피로 수명 측면에서 취약부가 없는가?",
-  "BOM과 3D/도면의 부품명·품번·리비전이 일치하는가?",
+  "주요 부품에 재질(Material)과 표면처리(Surface Treatment)가 정확히 지정되어 있는가?",
+  "표준품(나사, 체결구, O-ring, 인서트 등)을 사용하여 설계했는가?",
+  "파트 번호, 명칭, 리비전이 3D CAD 모델, EBOM, 2D 도면 간에 일치하는가?",
+  "CAD 어셈블리와 Drawing이 최신으로 업데이트되었으며, 표제란에 누락이나 중복이 없는가?",
+  "수량(Quantity)은 필요수량에 맞게 입력하였는가?",
+  "BOM 항목에 입력된 재질 및 표면처리 정보가 재질 표준 및 규제(예: ROHS/REACH)에 부합하는가?",
+  "모든 아이템의 리비전 이력이 업데이트되어 있으며, 진행 중(WIP) 상태가 아닌 확정 상태인가?",
+  "도면 및 3D 모델에서 정의된 치수가 입력되었고, 3D 데이터 기준 간섭체크를 수행했는가?",
+  "메타데이터(부품번호, 이름, 주요속성)가 정확히 입력되어 있는가?",
+  "EBOM이 요구사항(시험 장치, 안전 커버, 환경 조건 등)을 충족하며, 누락된 부품은 없는가?",
 ];
+
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function ReviewPage() {
       alert("BOM 추출 중 오류: " + (e?.message ?? "unknown"));
     }
   };
-  
+
   const handleSave = async () => {
     try {
       await saveReview(id!, {
@@ -75,7 +76,7 @@ export default function ReviewPage() {
         padding: 16,
         boxShadow: "0 2px 10px rgba(0,0,0,0.06)"
       }}>
-        <div style={{ display:"grid", rowGap: 10 }}>
+        <div style={{ display: "grid", rowGap: 10 }}>
           {CHECK_ITEMS.map((label, i) => (
             <label key={i} style={{
               display: "flex",

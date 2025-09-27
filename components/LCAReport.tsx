@@ -20,7 +20,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();  
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {

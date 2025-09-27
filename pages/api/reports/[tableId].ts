@@ -12,10 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!tableId) return res.status(400).json({ error: "tableId is required" });
 
   const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { db: { schema: "app" } } // 여기서 스키마 명시
-    );
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "app" } } // 여기서 스키마 명시
+  );
   const { data, error } = await supabase
     .from("treetable_nodes") // ← 스키마에 맞게 바꿔
     .select("material_code, weight")

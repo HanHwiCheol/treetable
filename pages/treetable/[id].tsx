@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabaseClient";
 export default function TreetableDetail() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
-  
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) =>
@@ -53,29 +53,29 @@ export default function TreetableDetail() {
     );
   }
 
-return (
-  <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
-    <h1 style={{ marginBottom: 12 }}>BOM Table</h1>
+  return (
+    <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
+      <h1 style={{ marginBottom: 12 }}>BOM Table</h1>
 
-    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-      {/* 왼쪽: Toolbar (Excel Import + 목록으로 + 저장하기) */}
-      <Toolbar
-        onBack={() => router.push("/")}
-        onSave={save}
-        saving={saving}
-        importMode={importMode}
-        setImportMode={setImportMode}
-        onFile={onFile}
-        rows={rows as NodeRow[]}              // ✅ 추가
-        treetableId={treetableId as string}   // ✅ 추가
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+        {/* 왼쪽: Toolbar (Excel Import + 목록으로 + 저장하기) */}
+        <Toolbar
+          onBack={() => router.push("/")}
+          onSave={save}
+          saving={saving}
+          importMode={importMode}
+          setImportMode={setImportMode}
+          onFile={onFile}
+          rows={rows as NodeRow[]}              // ✅ 추가
+          treetableId={treetableId as string}   // ✅ 추가
+        />
+      </div>
+
+      <TreeGrid
+        rows={rows as NodeRow[]}
+        onChangeCell={onChangeCell}
+        materials={materials}
       />
     </div>
-
-    <TreeGrid
-      rows={rows as NodeRow[]}
-      onChangeCell={onChangeCell}
-      materials={materials}
-    />
-  </div>
-);
+  );
 }

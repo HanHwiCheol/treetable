@@ -69,7 +69,7 @@ export function useTreetable(treetableId?: string, p0?: { ready: boolean; }) {
     setSaving(true);
     try {
       // 화면에서 남아있는 기존 id 수집 → 개별 삭제 반영
-      const remainIds = rows.filter((r) => r.id).map((r) => r.id!) ;
+      const remainIds = rows.filter((r) => r.id).map((r) => r.id!);
       if (importMode !== "replace") {
         await deleteMissingNodes(treetableId, remainIds);
       }

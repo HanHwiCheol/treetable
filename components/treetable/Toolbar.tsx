@@ -54,27 +54,27 @@ export function Toolbar({
 
       {/* 오른쪽: 목록으로 | 저장하기(흰색) | 다음단계(흰색, 조건부 활성화) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-      <button onClick={onBack} style={btnGhost}>목록으로</button>
-      <button
-        onClick={onSave}
-        disabled={saving}
-        style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
-      >
-        {saving ? "저장 중..." : "저장하기"}
-      </button>
-      <button
-        onClick={() => router.push(`/treetable/${treetableId}/review`)}
-        disabled={!rows.length || !rows.every(r => !!r.material_code)}
-        style={{
-          ...btnGhost,
-          opacity: rows.length && rows.every(r => !!r.material_code) ? 1 : 0.5,
-          cursor: rows.length && rows.every(r => !!r.material_code) ? "pointer" : "not-allowed",
-        }}
-      >
-        다음단계
-      </button>
+        <button onClick={onBack} style={btnGhost}>목록으로</button>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
+        >
+          {saving ? "저장 중..." : "저장하기"}
+        </button>
+        <button
+          onClick={() => router.push(`/treetable/${treetableId}/review`)}
+          disabled={!rows.length || !rows.every(r => !!r.material_code)}
+          style={{
+            ...btnGhost,
+            opacity: rows.length && rows.every(r => !!r.material_code) ? 1 : 0.5,
+            cursor: rows.length && rows.every(r => !!r.material_code) ? "pointer" : "not-allowed",
+          }}
+        >
+          다음단계
+        </button>
+      </div>
     </div>
-  </div>
   );
 }
 

@@ -75,7 +75,7 @@ export default function Home() {
     const { data, error } = await supabase.rpc("create_treetable", {
       p_name: name,
     });
-    
+
     if (error) {
       // RPC가 없다면 아래 주석 해제하여 직접 insert(방법A)
       // const { data, error } = await supabase
