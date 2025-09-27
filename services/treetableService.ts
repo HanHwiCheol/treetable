@@ -102,8 +102,6 @@ export async function saveAllNodes(
       name: r.name ?? null,
       material_code: r.material_code ?? null,
       weight: r.weight ?? null,
-      created_at: r.created_at ?? null,   // ✅ 추가
-      updated_at: r.updated_at ?? null,   // ✅ 추가
     }));
 
     const { data, error } = await supabase
