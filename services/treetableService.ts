@@ -71,6 +71,19 @@ export async function saveReview(treetableId: string, checklist: any) {
   if (error) throw new Error(error.message);
 }
 
+export async function fetchReview(treetableId: string): Promise<any | null> {
+  const { data, error } = await supabase
+    .from("treetable_reviews")
+    .select("checklist, updated_at")
+    .eq("treetable_id", treetableId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") throw error; // no rows 허용
+  return data?.checklist ?? null;
+}
+
 /** 신규/수정 저장 (replace 모드: 사전 전체삭제 후 삽입) */
 export async function saveAllNodes(
   treetableId: string,

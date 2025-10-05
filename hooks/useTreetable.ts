@@ -42,12 +42,16 @@ export function useTreetable(treetableId?: string, p0?: { ready: boolean; }) {
       const r = { ...next[idx] };
 
       if (key === "material_code") {
-        const m = materials.find(mm => mm.code === value);
+        // 재질 코드만 변경 — 중량은 손대지 않음(엑셀 값 유지)
         r.material_code = value === "" ? null : value;
-        r.weight = m?.weight ?? null;
+
+        // 만약 "엑셀에 weight가 없어서 현재 weight가 빈 값(null)"이라면,
+        // 선택한 재질의 기본무게로 채우고 싶을 때만 아래 두 줄을 해제하세요.
+        // const m = materials.find(mm => mm.code === value);
+        // if (r.weight == null) r.weight = m?.weight ?? null;
         r.updated_at = new Date().toISOString();
       } else if (key === "revision") {
-        // ✅ 리비전이 바뀌면 재질/무게 초기화 + 수정일 갱신
+        // 리비전이 바뀌면 재질/무게 초기화 + 수정일 갱신
         r.revision = value === "" ? null : value;
         r.material_code = null;    // ← "선택" 상태
         r.weight = null;           // 재질 초기화에 맞춰 무게도 비움

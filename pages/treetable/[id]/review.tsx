@@ -1,7 +1,7 @@
 // pages/treetable/[id]/review.tsx
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
-import { saveReview } from "@/services/treetableService";
+import { useMemo, useState, useEffect } from "react";
+ import { saveReview, fetchReview } from "@/services/treetableService";
 
 const CHECK_ITEMS = [
   "주요 부품에 재질(Material)과 표면처리(Surface Treatment)가 정확히 지정되어 있는가?",
@@ -24,6 +24,29 @@ export default function ReviewPage() {
   const [checked, setChecked] = useState<boolean[]>(
     Array(CHECK_ITEMS.length).fill(false)
   );
+
+  // ✅ 저장된 체크리스트 초기 로드
+  useEffect(() => {
+    if (!id) return;
+    setChecked(Array(CHECK_ITEMS.length).fill(false));
+
+    (async () => {
+      try {
+        const saved = await fetchReview(id);
+        // saved 형태 예: { items: [{label: string, checked: boolean}, ...] }
+        if (saved?.items?.length) {
+          const map = CHECK_ITEMS.map(lbl => {
+            const hit = saved.items.find((it: any) => it.label === lbl);
+            return !!hit?.checked;
+          });
+          setChecked(map);
+        }
+      } catch (e: any) {
+        console.error("failed to load review:", e?.message ?? e);
+      }
+    })();
+  }, [id]);
+
   const allChecked = useMemo(() => checked.every(Boolean), [checked]);
 
   const toggle = (i: number) =>
@@ -64,8 +87,8 @@ export default function ReviewPage() {
         <h1 style={{ margin: 0 }}>설계 검토 체크리스트</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" onClick={() => router.push(`/treetable/${id}`)}>목록으로</button>
-          <button className="btn" disabled={!allChecked} onClick={handleExportBom}>BOM 정보 추출</button>
-          <button className="btn primary" disabled={!allChecked} onClick={handleSave}>저장하기</button>
+          <button className="btn" onClick={handleExportBom}>BOM 정보 추출</button>
+          <button className="btn primary" onClick={handleSave}>저장하기</button>
         </div>
       </div>
 

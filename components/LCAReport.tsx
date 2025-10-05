@@ -121,8 +121,8 @@ export default function LCAReport({ tableId }: { tableId: string }) {
       <section style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, marginTop: 16 }}>
         <h3 style={{ marginTop: 0 }}>해석 노트</h3>
         <ul style={{ marginTop: 8 }}>
-          <li>재질별 **중량 합계** 기준 비중. (LCA의 Inventory 간이 확인)</li>
-          <li>엄밀한 LCA에는 공정/에너지/수송 등 **LCI 데이터** 매핑이 필요.</li>
+          <li>재질별 중량 합계 기준 비중. (LCA의 Inventory 간이 확인)</li>
+          <li>엄밀한 LCA에는 공정/에너지/수송 등 LCI 데이터 매핑이 필요.</li>
           <li>필요 시 재질 그룹/어셈블리 계층 합산으로 확장 가능.</li>
         </ul>
       </section>

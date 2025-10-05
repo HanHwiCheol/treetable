@@ -14,7 +14,8 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
     if (/part(\s*)no|품번/.test(s)) return "part_no";
     if (/rev|revision|리비전/.test(s)) return "revision";
     if (/name|이름/.test(s)) return "name";
-    if (/material|재질/.test(s)) return "material_code";
+    if (/material|재질|소재|자재코드/.test(s)) return "material_code";
+    if (/(unit)?\s*weight|중량|무게|g\/ea|kg\/ea|그램|킬로그램/.test(s)) return "weight";
     return null;
   };
 
@@ -31,6 +32,12 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
   const tmpRows: (NodeRow & { parent_line_no?: string | null })[] = rowsRaw.map((r: any) => {
     const tmpId = genTmpId();
     if (r.line_no != null) byLine.set(String(r.line_no), tmpId);
+    // ✅ 숫자 변환: 문자열/엑셀 숫자 모두 수용
+    const parsedWeight =
+      r.weight == null || r.weight === ""
+        ? null
+        : Number(String(r.weight).replace(/[, ]/g, ""));
+
     return {
       _tmpId: tmpId,
       treetable_id: treetableId,
@@ -39,6 +46,7 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
       part_no: r.part_no ? String(r.part_no) : null,
       revision: r.revision ? String(r.revision) : null,
       name: r.name ? String(r.name) : null,
+      weight: Number.isFinite(parsedWeight as number) ? (parsedWeight as number) : null, // ✅ 추가
       material_code: r.material_code ? String(r.material_code) : null,
       parent_line_no: r.parent_line_no != null ? String(r.parent_line_no) : null,
     };

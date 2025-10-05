@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
-import { Session } from "@supabase/supabase-js"; // ✅ 추가
+import type { Session } from "@supabase/supabase-js";
 
 type TT = {
   id: string;
@@ -47,7 +47,7 @@ export default function Home() {
         console.error(error);
         setItems([]);
       } else {
-        setItems(data as TT[]);
+        setItems((data ?? []) as TT[]);
         setSelectedId(data?.[0]?.id ?? null);
       }
       setLoading(false);
@@ -94,6 +94,43 @@ export default function Home() {
     router.push(`/treetable/${selectedId}`);
   };
 
+  // ✅ 새로 추가: 삭제
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    const target = items.find((x) => x.id === selectedId);
+    const ok = confirm(
+      `정말 삭제할까요?\n\n이름: ${target?.name ?? selectedId}\n관련 행(노드)도 함께 삭제됩니다.`
+    );
+    if (!ok) return;
+
+    try {
+      // 1) 자식(노드) 먼저 삭제 (FK CASCADE가 있으면 생략 가능)
+      const { error: nodeErr } = await supabase
+        .from("treetable_nodes")
+        .delete()
+        .eq("treetable_id", selectedId);
+      if (nodeErr) throw nodeErr;
+
+      // 2) 부모(테이블) 삭제
+      const { error: tblErr } = await supabase
+        .from("treetables")
+        .delete()
+        .eq("id", selectedId);
+      if (tblErr) throw tblErr;
+
+      // 3) 클라이언트 상태 갱신
+      setItems((prev) => {
+        const next = prev.filter((x) => x.id !== selectedId);
+        setSelectedId(next[0]?.id ?? null);
+        return next;
+      });
+
+      alert("삭제되었습니다.");
+    } catch (e: any) {
+      alert("삭제 중 오류: " + (e?.message ?? "unknown"));
+    }
+  };
+
   // 미로그인 상태
   if (!session) {
     return (
@@ -110,7 +147,7 @@ export default function Home() {
   if (loading) {
     return (
       <div style={centerWrap}>
-        <div style={card}><p>불러오는 중...</p></div>
+        <div style={card}><p>불러오는 중.</p></div>
       </div>
     );
   }
@@ -130,7 +167,7 @@ export default function Home() {
     );
   }
 
-  // 데이터 있음 → 콤보박스 중앙 표시 + 열기/신규
+  // 데이터 있음 → 콤보박스 중앙 표시 + 열기/신규/삭제
   return (
     <div style={centerWrap}>
       <div style={card}>
@@ -147,9 +184,10 @@ export default function Home() {
           ))}
         </select>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "center" }}>
           <button onClick={handleOpen} style={btnPrimary}>열기</button>
           <button onClick={handleCreate} style={btnDefault}>신규 생성</button>
+          <button onClick={handleDelete} style={btnDanger} disabled={!selectedId}>삭제</button>
           <button onClick={signOut} style={btnGhost}>로그아웃</button>
         </div>
       </div>
@@ -191,6 +229,12 @@ const btnDefault: React.CSSProperties = {
   ...btnPrimary,
   background: "#e5e7eb",
   color: "#111827",
+};
+
+const btnDanger: React.CSSProperties = {
+  ...btnPrimary,
+  background: "#dc2626",
+  color: "#fff",
 };
 
 const btnGhost: React.CSSProperties = {
