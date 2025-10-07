@@ -1,7 +1,8 @@
 // pages/treetable/[id]/review.tsx
 import { useRouter } from "next/router";
 import { useMemo, useState, useEffect } from "react";
- import { saveReview, fetchReview } from "@/services/treetableService";
+import { saveReview, fetchReview } from "@/services/treetableService";
+import { supabase } from "@/lib/supabaseClient";
 
 const CHECK_ITEMS = [
   "주요 부품에 재질(Material)과 표면처리(Surface Treatment)가 정확히 지정되어 있는가?",
@@ -57,26 +58,71 @@ export default function ReviewPage() {
     });
 
   const handleExportBom = async () => {
+    const t0 = performance.now();
     try {
       // TODO: 실제 BOM 추출 로직 실행
       // await exportBom(id!);
 
-      // 추출 끝나면 LCA 리포트 페이지로 이동
+      // ✅ 로그 기록
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s?.session?.user?.id ?? null;
+      const email = s?.session?.user?.email ?? null;
+
+      await supabase.from("usage_events").insert([{
+        user_id: uid,
+        user_email: email,
+        treetable_id: id!,            // DB 컬럼은 snake_case
+        step: "LCA REPORT",
+        action: "Display LCA report",           // 혹은 "export"로 통일해도 됨
+        duration_ms: Math.round(performance.now() - t0),
+        detail: { note: "Go to LCA from review page" }
+      }]);
+
+      // 리포트 페이지로 이동
       router.push(`/lca/${id}`);
     } catch (e: any) {
-      alert("BOM 추출 중 오류: " + (e?.message ?? "unknown"));
+      // 실패도 로그 남김
+      try {
+        const { data: s } = await supabase.auth.getSession();
+        await supabase.from("usage_events").insert([{
+          user_id: s?.session?.user?.id ?? null,
+          user_email: s?.session?.user?.email ?? null,
+          treetable_id: id!,
+          step: "LCA REPORT",
+          action: "Error displaying LCA report",
+          duration_ms: Math.round(performance.now() - t0),
+          detail: { message: e?.message ?? String(e) }
+        }]);
+      } catch (_) { }
+      alert("LCA REPORT 표시 중 오류: " + (e?.message ?? "unknown"));
     }
   };
 
   const handleSave = async () => {
+    const t0 = performance.now();
+
     try {
       await saveReview(id!, {
         items: CHECK_ITEMS.map((label, i) => ({ label, checked: checked[i] })),
       });
+
+      // ⬇️ 추가
+      const { data: s } = await supabase.auth.getSession();
+      const email = s.session?.user?.email ?? null;
+      const uid = s.session?.user?.id ?? null;
+      await supabase.from("usage_events").insert([{
+        user_id: uid,
+        user_email: email,
+        step: "CHECK List",
+        action: "Save Check list",
+        treetable_id: id,
+        duration_ms: Math.round(performance.now() - t0),
+        detail: { checkedCount: checked.filter(Boolean).length }
+      }]);
       alert("체크리스트가 저장되었습니다.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
-      alert("저장 중 오류 발생:\n" + msg);
+      alert("Check list 저장 중 오류 발생:\n" + msg);
     }
   };
 

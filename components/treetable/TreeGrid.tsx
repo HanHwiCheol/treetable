@@ -45,7 +45,7 @@ export function TreeGrid({
             <th>생성일</th>
             <th>수정일</th>
             <th>재질</th>
-            <th style={{ textAlign: "right", paddingRight: 12 }}>무게</th>
+            <th>무게</th>
           </tr>
         </thead>
         <tbody>

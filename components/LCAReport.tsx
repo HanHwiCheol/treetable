@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from "recharts";
 import { useRouter } from "next/router";
+import { supabase } from "@/lib/supabaseClient";
 
 type Resp = {
   tableId: string;
@@ -24,10 +25,27 @@ export default function LCAReport({ tableId }: { tableId: string }) {
 
   useEffect(() => {
     (async () => {
+      const t0 = performance.now();
+
       try {
         const r = await fetch(`/api/reports/${encodeURIComponent(tableId)}`, { cache: "no-store" });
         if (!r.ok) throw new Error(await r.text());
         setData(await r.json());
+
+        const { data: s } = await supabase.auth.getSession();
+        const email = s.session?.user?.email ?? null;
+        const uid = s.session?.user?.id ?? null;
+
+        // ✅ 성공 시에만 로깅
+        await supabase.from("usage_events").insert([{
+          user_id: uid,
+          user_email: email,
+          step: "lca_export",
+          action: "success",
+          treetable_id: tableId,
+          duration_ms: Math.round(performance.now() - t0),
+          detail: { note: "report fetch success" }
+        }]);
       } catch (e: any) {
         setErr(e?.message ?? "fetch error");
       } finally {
@@ -35,6 +53,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
       }
     })();
   }, [tableId]);
+
 
   const pieData = useMemo(() => {
     if (!data) return [];

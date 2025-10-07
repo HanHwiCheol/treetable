@@ -23,7 +23,7 @@ export default function TreetableDetail() {
   }, []);
 
   const { id } = router.query;
-  const treetableId = Array.isArray(id) ? id[0] : id;
+  const treetable_id = Array.isArray(id) ? id[0] : id;
 
   const {
     materials,            // ✅ 훅에서 받아온다
@@ -31,19 +31,54 @@ export default function TreetableDetail() {
     loading, saving,
     importMode, setImportMode,
     onChangeCell, save,
-  } = useTreetable(treetableId, { ready: !!session });
+  } = useTreetable(treetable_id, { ready: !!session });
 
   const onFile = async (file: File) => {
-    if (!treetableId) return;
+    if (!treetable_id) return;
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
-    const imported = rowsFromXlsx(wb, treetableId);
+    const imported = rowsFromXlsx(wb, treetable_id);
 
     if (importMode === "replace") setRows(imported);
     else setRows((prev) => [...prev, ...imported]);
+
+    try {
+      const { data: s, error: sErr } = await supabase.auth.getSession();
+      if (sErr || !s.session) { alert("로그인 세션 없음"); return; }
+
+      const email = s.session?.user?.email ?? null;
+      const uid = s.session?.user?.id ?? null;
+
+      const startAt = localStorage.getItem("prepStartAt");
+      const durationMs = startAt
+        ? Date.now() - new Date(startAt).getTime()
+        : null;
+      const { error } = await supabase.from("usage_events").insert([{
+        user_id: uid,
+        user_email: email,
+        treetable_id: treetable_id,
+        step: "EBOM",
+        action: startAt ? "EBOM Import" : "success_no_prepmark",
+        duration_ms: durationMs, // null이면 DB에 null 저장
+        detail: {
+          note: startAt
+            ? "prep time from user mark to import success"
+            : "no prepStartAt; logged at file import",
+        },
+      }]);
+       
+      if (error) {
+        alert("usage_events insert 실패: " + error.message);
+      } else if (startAt) {
+        localStorage.removeItem("prepStartAt");
+      }
+
+    } catch (e) {
+      console.error("log prep time failed", e);
+    }
   };
 
-  if (!treetableId) return null;
+  if (!treetable_id) return null;
   if (loading) {
     return (
       <div style={{ maxWidth: 1200, margin: "40px auto", padding: 16 }}>
@@ -66,8 +101,8 @@ export default function TreetableDetail() {
           importMode={importMode}
           setImportMode={setImportMode}
           onFile={onFile}
-          rows={rows as NodeRow[]}              // ✅ 추가
-          treetableId={treetableId as string}   // ✅ 추가
+          rows={rows as NodeRow[]}
+          treetable_id={treetable_id as string}
         />
       </div>
 
