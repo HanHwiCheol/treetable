@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from "recharts";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabaseClient";
+import { logUsageEvent } from "@/utils/logUsageEvent";
 
 type Item = {
   material: string;
@@ -29,30 +29,14 @@ export default function LCAReport({ tableId }: { tableId: string }) {
   const [loading, setLoading] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { id } = router.query as { id?: string };
 
   useEffect(() => {
     (async () => {
-      const t0 = performance.now();
-
       try {
         const r = await fetch(`/api/reports/${encodeURIComponent(tableId)}`, { cache: "no-store" });
         if (!r.ok) throw new Error(await r.text());
         setData(await r.json());
-
-        const { data: s } = await supabase.auth.getSession();
-        const email = s.session?.user?.email ?? null;
-        const uid = s.session?.user?.id ?? null;
-
-        // ✅ 성공 시에만 로깅
-        await supabase.from("usage_events").insert([{
-          user_id: uid,
-          user_email: email,
-          step: "lca_export",
-          action: "success",
-          treetable_id: tableId,
-          duration_ms: Math.round(performance.now() - t0),
-          detail: { note: "report fetch success" }
-        }]);
       } catch (e: any) {
         setErr(e?.message ?? "fetch error");
       } finally {
@@ -66,7 +50,15 @@ export default function LCAReport({ tableId }: { tableId: string }) {
   const pieData = useMemo(() => {
     if (!data) return [];
     const totalC = data.totals.carbon_kgco2e || 0;
-    return data.items.map((it) => {
+
+    // ✅ "No Material" 등은 그래프에서 제외
+    const filtered = data.items.filter(
+      (it) =>
+        it.material &&
+        !["no material", "assembly", "none"].includes(it.material.toLowerCase())
+    );
+
+    return filtered.map((it) => {
       const val = Number((it.carbon_kgco2e ?? 0).toFixed(6));
       const pct = totalC ? (val / totalC) * 100 : 0;
       return { name: it.material_label, value: val, pct };
@@ -76,15 +68,27 @@ export default function LCAReport({ tableId }: { tableId: string }) {
   // 막대차트: 재질별 (좌:총질량 kg, 우:탄소 kgCO2e)
   const barData = useMemo(() => {
     if (!data) return [];
-    return data.items.map((it) => ({
+
+    const filtered = data.items.filter(
+      (it) =>
+        it.material &&
+        !["no material", "assembly", "none"].includes(it.material.toLowerCase())
+    );
+
+    return filtered.map((it) => ({
       material: it.material_label,
       mass_kg: Number((it.mass_kg ?? 0).toFixed(6)),
       carbon_kgco2e: Number((it.carbon_kgco2e ?? 0).toFixed(6)),
     }));
   }, [data]);
 
-  const handlePrint = () => window.print();
-  const handleCSV = () => {
+  const colors = ['#000000', '#404040', '#808080'];
+  const handlePrint = async () => {
+    window.print();
+    await logUsageEvent("LCA REPORT", "Print an LCA Report", { note: "report fetch success" });
+  }
+  const handleCSV = async () => {
+
     if (!data) return;
     // 컬럼: material, mass_kg, ef_kgco2e_perkg, carbon_kgco2e, carbon_share(%)
     const totalC = data.totals.carbon_kgco2e || 0;
@@ -107,6 +111,13 @@ export default function LCAReport({ tableId }: { tableId: string }) {
     a.download = `lca_material_carbon_${tableId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+
+    await logUsageEvent("LCA REPORT", "Export an LCA Report export to File type csv", { note: "report fetch success" });
+  };
+
+  const handleBack = async () => {
+    await logUsageEvent("STAGE Change", "Get back to Product review stage", { note: "Product review stage" });
+    router.push(`/treetable/${tableId}/Product_Review_Stage`);
   };
 
   if (loading) return <div style={{ padding: 16 }}>로딩중…</div>;
@@ -125,7 +136,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
           </div>
         </div>
         <div className="print-hide" style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => router.push("/")}>목록으로</button>   {/* pages/index.tsx 로 */}
+          <button onClick={handleBack}>이전으로</button> 
           <button onClick={handleCSV}>CSV</button>
           <button onClick={handlePrint}>인쇄/PDF</button>
         </div>
@@ -150,14 +161,19 @@ export default function LCAReport({ tableId }: { tableId: string }) {
             <XAxis dataKey="material" />
             <YAxis />
             <ReTooltip formatter={(v: any, n: any) => {
-              return n === "mass_kg" ? [`${v} kg`, "중량"] : [`${v} kgCO₂e`, "탄소"];
+              return n === "중량(kg)" ? [`${v} kg`, "중량"] : [`${v} kgCO₂e`, "탄소"];
             }} />
             <Legend />
+
             <Bar dataKey="mass_kg" name="중량(kg)">
-              {barData.map((_e, i) => <Cell key={`m-${i}`} />)}
+              {barData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
             </Bar>
             <Bar dataKey="carbon_kgco2e" name="탄소(kgCO₂e)">
-              {barData.map((_e, i) => <Cell key={i} />)}
+              {barData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
             </Bar>
           </BarChart>
         </div>

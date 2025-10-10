@@ -6,6 +6,8 @@ import { supabase } from "../lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import AuthForm from "../components/AuthForm";
 import TableSelector from "../components/TableSelector";
+import { logUsageEvent } from "@/utils/logUsageEvent";  
+
 import {
   btnGhost,
   card,
@@ -78,7 +80,7 @@ export default function Home() {
         user_id: uid,
         user_email: userEmail,
         treetable_id: null,
-        step: "Login",
+        step: "LOGIN",
         action: error ? "login_error" : "login Success",
         duration_ms: Math.round(performance.now() - t0),
         detail: error
@@ -92,16 +94,6 @@ export default function Home() {
       }
       alert("로그인 성공");
     } catch (e: any) {
-      // 예외 처리
-      await supabase.from("usage_events").insert([{
-        user_id: null,
-        user_email: email ?? null,
-        treetable_id: null,
-        step: "Login",
-        action: "login_exception",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { message: e?.message ?? String(e) }
-      }]);
       alert("로그인 중 오류: " + (e?.message ?? "unknown"));
     }
   };
@@ -137,87 +129,22 @@ export default function Home() {
   const handleCreate = async () => {
     const name = prompt("새 TreeTable 이름을 입력:");
     if (!name) return;
-
-    const t0 = performance.now();
+ 
     try {
       // 1️⃣ 기존 로직
       const { data, error } = await supabase.rpc("create_treetable", { p_name: name });
-
-      if (error) {
-        // 실패도 로그 남기기
-        const { data: s } = await supabase.auth.getSession();
-        await supabase.from("usage_events").insert([{
-          user_id: s.session?.user?.id ?? null,
-          user_email: s.session?.user?.email ?? null,
-          treetable_id: null,
-          step: "EBOM",
-          action: "Table create error",
-          duration_ms: Math.round(performance.now() - t0),
-          detail: { name, message: error.message }
-        }]);
-        alert(error.message);
-        return;
-      }
-
-      // 2️⃣ 성공 로그
-      const { data: s } = await supabase.auth.getSession();
-      await supabase.from("usage_events").insert([{
-        user_id: s.session?.user?.id ?? null,
-        user_email: s.session?.user?.email ?? null,
-        treetable_id: data.id,                   // 새로 생성된 테이블 id
-        step: "EBOM",
-        action: "EBOM Table create",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { name }
-      }]);
-
+      await logUsageEvent("EBOM", "EBOM Table create", { note: "EBOM Table create by user" });
       // 3️⃣ 다음 페이지 이동
       router.push(`/treetable/${data.id}`);
     } catch (e: any) {
-      // 예외 발생 시 로그 남기기
-      const { data: s } = await supabase.auth.getSession();
-      await supabase.from("usage_events").insert([{
-        user_id: s.session?.user?.id ?? null,
-        user_email: s.session?.user?.email ?? null,
-        treetable_id: null,
-        step: "EBOM",
-        action: "EBOM Table create exception",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { name, message: e?.message ?? String(e) }
-      }]);
       alert("생성 중 오류: " + (e?.message ?? "unknown"));
     }
   };
 
   const handleOpen = async () => {
     if (!selectedId) return;
-
-    const t0 = performance.now();
-
-    try {
-      // 1️⃣ 현재 로그인 세션 확인
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      // 2️⃣ usage_events에 로그 남기기
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id: selectedId,
-        step: "EBOM",
-        action: "EBOM Table Open",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { note: "TreeTable opened by user" }
-      }]);
-
-      // 3️⃣ 페이지 이동
+      await logUsageEvent("EBOM", "EBOM Table Open", { note: "TreeTable opened by user" });
       router.push(`/treetable/${selectedId}`);
-    } catch (e: any) {
-      console.error("usage_events insert 실패:", e);
-      // insert 실패하더라도 페이지 이동은 수행
-      router.push(`/treetable/${selectedId}`);
-    }
   };
 
   const handleDelete = async () => {
@@ -228,7 +155,6 @@ export default function Home() {
     );
     if (!ok) return;
 
-    const t0 = performance.now();
     try {
       // 1️⃣ 자식(노드) 먼저 삭제 (FK CASCADE가 있으면 생략 가능)
       const { error: nodeErr } = await supabase
@@ -244,21 +170,6 @@ export default function Home() {
         .eq("id", selectedId);
       if (tblErr) throw tblErr;
 
-      // 3️⃣ 삭제 성공 로그 기록
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id: selectedId,        // 삭제된 테이블 ID
-        step: "EBOM",                     // BOM 단계 내 동작
-        action: "EBOM Table Delete",                // 삭제 이벤트
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { name: target?.name ?? null, note: "TreeTable 삭제 완료" },
-      }]);
-
       // 4️⃣ 클라이언트 상태 갱신
       setItems((prev) => {
         const next = prev.filter((x) => x.id !== selectedId);
@@ -266,23 +177,9 @@ export default function Home() {
         return next;
       });
 
+      await logUsageEvent("EBOM", "EBOM Table Delete", { note: "EBOM Table delete by user" });
       alert("삭제되었습니다.");
     } catch (e: any) {
-      // 삭제 실패도 로그 남김
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id: selectedId,
-        step: "EBOM",
-        action: "EBOM Table delete error",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { name: target?.name ?? null, message: e?.message ?? String(e) },
-      }]);
-
       alert("삭제 중 오류: " + (e?.message ?? "unknown"));
     }
   };

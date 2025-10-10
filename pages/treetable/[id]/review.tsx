@@ -2,7 +2,7 @@
 import { useRouter } from "next/router";
 import { useMemo, useState, useEffect } from "react";
 import { saveReview, fetchReview } from "@/services/treetableService";
-import { supabase } from "@/lib/supabaseClient";
+import { logUsageEvent } from "@/utils/logUsageEvent";
 
 const CHECK_ITEMS = [
   "주요 부품에 재질(Material)과 표면처리(Surface Treatment)가 정확히 지정되어 있는가?",
@@ -59,65 +59,30 @@ export default function ReviewPage() {
 
 
   const goToBOMTable = async () => {
-      const t0 = performance.now();
-      // ✅ 로그 기록
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id: id!,           
-        step: "EBOM",
-        action: "Display EBOM Table",          
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { note: "Go to LCA from review page" }
-      }]);
-
+    await logUsageEvent("EBOM", "Display EBOM Table", { note: "Go to LCA from review page" });
     router.push(`/treetable/${id}`);
   };
 
   const handleExportBom = async () => {
-    const t0 = performance.now();
     try {
-      // TODO: 실제 BOM 추출 로직 실행
-      // await exportBom(id!);
-
-      // ✅ 로그 기록
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id: id!,            // DB 컬럼은 snake_case
-        step: "LCA REPORT",
-        action: "Display LCA report",           // 혹은 "export"로 통일해도 됨
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { note: "Go to LCA from review page" }
-      }]);
-
+      await logUsageEvent("LCA REPORT", "Display LCA report", { note: "Go to LCA from review page" });
       // 리포트 페이지로 이동
       router.push(`/lca/${id}`);
     } catch (e: any) {
       // 실패도 로그 남김
-      try {
-        const { data: s } = await supabase.auth.getSession();
-        await supabase.from("usage_events").insert([{
-          user_id: s?.session?.user?.id ?? null,
-          user_email: s?.session?.user?.email ?? null,
-          treetable_id: id!,
-          step: "LCA REPORT",
-          action: "Error displaying LCA report",
-          duration_ms: Math.round(performance.now() - t0),
-          detail: { message: e?.message ?? String(e) }
-        }]);
-      } catch (_) { }
       alert("LCA REPORT 표시 중 오류: " + (e?.message ?? "unknown"));
     }
   };
+
+  const handleEnd = async () => {
+    //모든 체크리스트가 다 체크 되었다면 프로세스를 종료하고 결과페이지를 Open한다.
+    alert("모든 체크리스트가 다 체크 되었나요? 확인 버튼을 클릭하면 제품개발 프로세스를 종료합니다.");
+  }
+
+  const handleNextProcess = async () => {
+    await logUsageEvent("STAGE Change", "Going to Testing/Prototype Stage", { note: "Testing/Prototype Stage" });
+    router.push(`/treetable/${id}/Testing_Prototype_Stage`);
+  }
 
   const handleSave = async () => {
     const t0 = performance.now();
@@ -126,20 +91,7 @@ export default function ReviewPage() {
       await saveReview(id!, {
         items: CHECK_ITEMS.map((label, i) => ({ label, checked: checked[i] })),
       });
-
-      // ⬇️ 추가
-      const { data: s } = await supabase.auth.getSession();
-      const email = s.session?.user?.email ?? null;
-      const uid = s.session?.user?.id ?? null;
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        step: "CHECK List",
-        action: "Save Check list",
-        treetable_id: id,
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { checkedCount: checked.filter(Boolean).length }
-      }]);
+      await logUsageEvent("CHECK List", "Save Check list", { checkedCount: checked.filter(Boolean).length });
       alert("체크리스트가 저장되었습니다.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : JSON.stringify(err);
@@ -147,15 +99,24 @@ export default function ReviewPage() {
     }
   };
 
+  const handleBack = async () => {
+    await logUsageEvent("EBOM", "Get back to EBOM Table", { note: "EBOM Table View" });
+    router.push(`/treetable/${id}`);  // 예: 이전 페이지로 돌아가기
+  }
+
   return (
     <div style={{ padding: 16 }}>
       {/* 상단 타이틀 + 버튼 */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <h1 style={{ margin: 0 }}>설계 검토 체크리스트</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={goToBOMTable}>목록으로</button>
-          <button className="btn" onClick={handleExportBom}>BOM 정보 추출</button>
-          <button className="btn primary" onClick={handleSave}>저장하기</button>
+          {/* <button className="btn" onClick={goToBOMTable}>목록으로</button> */}
+          <button className="btn" onClick={handleSave}>저장하기</button>
+          {/* <button className="btn" onClick={handleExportBom}>LCA 분석</button> */}
+          {/* <button className="btn" onClick={handleEnd}>프로세스 종료</button> */}
+          <span style={{ margin: "0 8px" }}>|</span>  {/* 구분자 */}
+          <button className="btn" onClick={handleBack} >이전단계</button>
+          <button className="btn" onClick={handleNextProcess}>다음 단계</button>
         </div>
       </div>
 

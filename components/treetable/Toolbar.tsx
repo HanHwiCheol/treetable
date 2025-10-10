@@ -99,8 +99,6 @@ export function Toolbar({
       router.push(`/treetable/${treetable_id}/review`);
     } catch (err) {
       console.error("usage_events insert 실패:", err);
-      // 실패해도 페이지 이동은 수행
-      router.push(`/treetable/${treetable_id}/review`);
     }
   };
 
@@ -160,32 +158,11 @@ export function Toolbar({
 
       {/* 오른쪽: 목록으로 | 저장하기(흰색) | 다음단계(흰색, 조건부 활성화) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-        <button
-          style={btnCatia}
-          className="btn"
-          onClick={handleCatiaStartClick}  // ✅ 핸들러 사용
-        >
-          CATIA 작업 시작
-        </button>
-        <button
-          onClick={handleSaveClick}       // ✅ 핸들러 사용
-          disabled={saving}
-          style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}
-        >
-          {saving ? "저장 중..." : "저장하기"}
-        </button>
-        <button
-          onClick={handleNextStepClick}
-          disabled={!rows.length || !allMaterialsChosen}  
-          style={{
-            ...btnGhost,
-            opacity: rows.length && allMaterialsChosen ? 1 : 0.5,
-            cursor: rows.length && allMaterialsChosen ? "pointer" : "not-allowed",
-          }}
-        >
-          다음단계
-        </button>
-        <button onClick={onBack} style={btnGhost}>목록으로</button>
+        <button style={btnCatia} className="btn" onClick={handleCatiaStartClick}>CATIA 작업</button>
+        <button onClick={handleSaveClick} disabled={saving} style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}>{saving ? "저장 중..." : "저장하기"}</button>
+        <span style={{ margin: "0 8px" }}>|</span>  {/* 구분자 */}
+        <button onClick={onBack} style={btnGhost}>이전단계</button>
+        <button onClick={handleNextStepClick} disabled={!rows.length || !allMaterialsChosen}  style={{...btnGhost, opacity: rows.length && allMaterialsChosen ? 1 : 0.5,cursor: rows.length && allMaterialsChosen ? "pointer" : "not-allowed",}}>다음단계</button>
       </div>
     </div>
   );
