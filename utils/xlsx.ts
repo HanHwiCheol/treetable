@@ -9,13 +9,17 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
 
   const keyMap = (k: string) => {
     const s = String(k).trim().toLowerCase();
-    if (/(^|_)line(\s*)no|라인번호/.test(s)) return "line_no";
-    if (/(^|_)parent(\s*)line(\s*)no|부모라인|parent/.test(s)) return "parent_line_no";
-    if (/part(\s*)no|품번/.test(s)) return "part_no";
+    if (/^line[_\s-]*no$|라인번호/.test(s)) return "line_no";
+    if (/^parent[_\s-]*line[_\s-]*no$|부모라인|^parent$/.test(s)) return "parent_line_no";
+    if (/^part[_\s-]*no$|품번/.test(s)) return "part_no";
     if (/rev|revision|리비전/.test(s)) return "revision";
     if (/name|이름/.test(s)) return "name";
-    if (/material|재질|소재|자재코드/.test(s)) return "material_code";
-    if (/(unit)?\s*weight|중량|무게|g\/ea|kg\/ea|그램|킬로그램/.test(s)) return "weight";
+    if (/material|재질|소재|자재코드/.test(s)) return "material";
+    if (/^qty$|수량|quantity/.test(s)) return "qty";
+    if (/^qty[_\s-]*uom$|단위|uom/.test(s)) return "qty_uom";
+    if (/mass[_\s-]*per[_\s-]*ea|개당질량|mass\/ea|kg\/ea/.test(s)) return "mass_per_ea_kg";
+    // 레거시: 총중량이 들어오면 weight로 받아 두고 아래에서 변환
+    if (/(^|_)weight$|총중량|중량|무게/.test(s)) return "weight";
     return null;
   };
 
@@ -32,11 +36,13 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
   const tmpRows: (NodeRow & { parent_line_no?: string | null })[] = rowsRaw.map((r: any) => {
     const tmpId = genTmpId();
     if (r.line_no != null) byLine.set(String(r.line_no), tmpId);
-    // ✅ 숫자 변환: 문자열/엑셀 숫자 모두 수용
-    const parsedWeight =
-      r.weight == null || r.weight === ""
-        ? null
-        : Number(String(r.weight).replace(/[, ]/g, ""));
+    // 숫자 변환 유틸
+    const toNum = (v: any) =>
+      v == null || v === "" ? null : Number(String(v).replace(/[, ]/g, ""));
+    const parsedQty = toNum(r.qty);
+    const parsedMassPerEa = toNum(r.mass_per_ea_kg);
+    const parsedWeight = toNum(r.weight); // 레거시 총중량(kg 가정)
+    const uom = (r.qty_uom ?? "").toString().trim().toLowerCase() || null;
 
     return {
       _tmpId: tmpId,
@@ -46,8 +52,15 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
       part_no: r.part_no ? String(r.part_no) : null,
       revision: r.revision ? String(r.revision) : null,
       name: r.name ? String(r.name) : null,
-      weight: Number.isFinite(parsedWeight as number) ? (parsedWeight as number) : null, // ✅ 추가
-      material_code: r.material_code ? String(r.material_code) : null,
+      //weight: Number.isFinite(parsedWeight as number) ? (parsedWeight as number) : null, // ✅ 추가
+      qty: parsedQty,
+      qty_uom: uom,
+      mass_per_ea_kg: parsedMassPerEa,
+      // 레거시 weight만 있고 새 필드가 없을 때 자동 매핑(= ea 1개짜리)
+      ...(parsedWeight != null && (parsedQty == null && !uom && parsedMassPerEa == null)
+        ? { qty: 1, qty_uom: "ea", mass_per_ea_kg: parsedWeight }
+        : {}),
+      material: r.material ? String(r.material) : null,
       parent_line_no: r.parent_line_no != null ? String(r.parent_line_no) : null,
     };
   });
@@ -58,6 +71,18 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
       const pid = byLine.get(r.parent_line_no);
       if (pid) r.parent_id = pid;
     }
+  });
+
+  // ✅ 라인번호 계층 정렬 추가
+  tmpRows.sort((a, b) => {
+    const ap = String(a.line_no || "").split(".").map(Number);
+    const bp = String(b.line_no || "").split(".").map(Number);
+    for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
+      const av = ap[i] || 0;
+      const bv = bp[i] || 0;
+      if (av !== bv) return av - bv;
+    }
+    return 0;
   });
 
   // level 계산
@@ -80,12 +105,23 @@ export function rowsFromXlsx(wb: XLSX.WorkBook, treetableId: string): NodeRow[] 
     return lv;
   };
 
-  const withLevels = tmpRows.map((r) => ({ ...r, _level: getLevel(r) }));
+  const withLevels = tmpRows
+    .map((r) => ({ ...r, _level: getLevel(r) }))
+    // ✅ line_no가 없는 행 제거
+    .filter((r) => r.line_no != null && r.line_no !== "");
+
+  // ✅ 안전한 계층 정렬
   withLevels.sort((a, b) => {
-    const la = a._level ?? 0;
-    const lb = b._level ?? 0;
-    if (la !== lb) return la - lb;
-    return String(a.line_no ?? "").localeCompare(String(b.line_no ?? ""));
+    const lineA = String(a.line_no || "");
+    const lineB = String(b.line_no || "");
+    const ap = lineA.split(".").map(Number);
+    const bp = lineB.split(".").map(Number);
+    for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
+      const av = ap[i] || 0;
+      const bv = bp[i] || 0;
+      if (av !== bv) return av - bv;
+    }
+    return 0;
   });
 
   return withLevels;

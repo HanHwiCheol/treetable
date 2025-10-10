@@ -17,24 +17,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     { db: { schema: "app" } } // 여기서 스키마 명시
   );
   const { data, error } = await supabase
-    .from("treetable_nodes") // ← 스키마에 맞게 바꿔
-    .select("material_code, weight")
+    .from("v_lca_carbon_by_table")
+    .select("material, material_label, mass_kg, ef_kgco2e_perkg, carbon_kgco2e")
     .eq("treetable_id", tableId);
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const map = new Map<string, number>();
-  for (const row of data ?? []) {
-    const m = row.material_code ?? "Unknown";
-    const w = Number(row.weight ?? 0);
-    map.set(m, (map.get(m) ?? 0) + w);
-  }
-
-  const items = Array.from(map.entries())
-    .map(([material, totalWeight]) => ({ material, totalWeight }))
-    .sort((a, b) => b.totalWeight - a.totalWeight);
-
-  const totalWeight = items.reduce((s, r) => s + r.totalWeight, 0);
-
-  return res.status(200).json({ tableId, totalWeight, items });
+  const items = (data ?? []).sort((a, b) => (b.carbon_kgco2e ?? 0) - (a.carbon_kgco2e ?? 0));
+  const totals = items.reduce(
+    (acc, r) => {
+      acc.mass_kg += r.mass_kg ?? 0;
+      acc.carbon_kgco2e += r.carbon_kgco2e ?? 0;
+      return acc;
+    },
+    { mass_kg: 0, carbon_kgco2e: 0 }
+  );
+  return res.status(200).json({
+    tableId,
+    totals,   // { mass_kg, carbon_kgco2e }
+    items,    // [{ material, material_label, mass_kg, ef_kgco2e_perkg, carbon_kgco2e }]
+  });
 }

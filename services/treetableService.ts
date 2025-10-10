@@ -11,9 +11,8 @@ const TBL = {
 
 export async function fetchMaterials(): Promise<Material[]> {
   const { data, error } = await supabase
-    .from(TBL.materials)
-    .select("code,label,category,weight")
-    .order("label", { ascending: true });
+    .from("materials")
+    .select("code,label,category,weight,emission_factor");  // ← 추가
   if (error) throw error;
   return (data ?? []) as Material[];
 }
@@ -21,9 +20,9 @@ export async function fetchMaterials(): Promise<Material[]> {
 export async function fetchNodes(treetableId: string): Promise<NodeRow[]> {
   const { data, error } = await supabase
     .from(TBL.nodes)
-    .select("id,treetable_id,parent_id,line_no,part_no,revision,name,material_code,weight,created_at,updated_at")
+    .select("id,treetable_id,parent_id,line_no,part_no,revision,name,material,qty,qty_uom,mass_per_ea_kg,total_mass_kg,weight,created_at,updated_at")
     .eq("treetable_id", treetableId)
-    .order("created_at", { ascending: true });
+    .order("line_no", { ascending: true });
   if (error) throw error;
   return (data ?? []) as NodeRow[];
 }
@@ -113,8 +112,11 @@ export async function saveAllNodes(
       part_no: r.part_no ?? null,
       revision: r.revision ?? null,
       name: r.name ?? null,
-      material_code: r.material_code ?? null,
-      weight: r.weight ?? null,
+      material: r.material ?? null,
+      qty: r.qty ?? null,
+      qty_uom: r.qty_uom ?? null,
+      mass_per_ea_kg: r.mass_per_ea_kg ?? null,
+      // total_mass_kg는 서버(Trigger/Generated)가 계산 → 저장 X
     }));
 
     const { data, error } = await supabase
@@ -144,8 +146,11 @@ export async function saveAllNodes(
       part_no: r.part_no ?? null,
       revision: r.revision ?? null,
       name: r.name ?? null,
-      material_code: r.material_code ?? null,
+      material: r.material ?? null,
       weight: r.weight ?? null,
+      qty: r.qty ?? null,
+      qty_uom: r.qty_uom ?? null,
+      mass_per_ea_kg: r.mass_per_ea_kg ?? null,
       created_at: r.created_at ?? null,   // ✅ 추가
       updated_at: r.updated_at ?? null,   // ✅ 추가
     }));

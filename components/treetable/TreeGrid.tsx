@@ -27,14 +27,16 @@ export function TreeGrid({
       <table style={table}>
         {/* ✅ 고정 컬럼폭 지정 */}
         <colgroup>
-          <col style={{ width: 80 }} /> {/* 라인번호 */}
-          <col style={{ width: 100 }} /> {/* 품번 */}
-          <col style={{ width: 50 }} />  {/* 리비전 */}
-          <col style={{ width: 120 }} /> {/* 이름 */}
-          <col style={{ width: 120 }} /> {/* 생성일 */}
-          <col style={{ width: 120 }} /> {/* 수정일 */}
-          <col style={{ width: 200 }} /> {/* 재질 */}
-          <col style={{ width: 60 }} /> {/* 무게 */}
+          <col style={{ width: 100 }} /> {/* 라인번호 */}
+          <col style={{ width: 140 }} /> {/* 품번 */}
+          <col style={{ width: 80 }} />  {/* 리비전 */}
+          <col style={{ width: 200 }} /> {/* 이름 */}
+          <col style={{ width: 140 }} /> {/* 생성일 */}
+          <col style={{ width: 140 }} /> {/* 수정일 */}
+          <col style={{ width: 180 }} /> {/* 재질 */}
+          <col style={{ width: 40 }} /> {/* 수량 */}
+          <col style={{ width: 40 }} />  {/* 단위 */}
+          <col style={{ width: 100 }} /> {/* 총질량(kg) */}
         </colgroup>
         <thead style={thead}>
           <tr>
@@ -45,13 +47,15 @@ export function TreeGrid({
             <th>생성일</th>
             <th>수정일</th>
             <th>재질</th>
-            <th>무게</th>
+            <th>수량</th>
+            <th>단위</th>
+            <th>총질량(kg)</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={8} style={emptyCell}>
+              <td colSpan={11} style={emptyCell}>
                 데이터가 없습니다. 엑셀을 Import 하세요.
               </td>
             </tr>
@@ -101,29 +105,48 @@ export function TreeGrid({
                 </td>
                 {/* 재질 */}
                 <td>
-                  <select
-                    value={r.material_code ?? ""}
-                    onChange={(e) => onChangeCell(idx, "material_code", e.target.value)}
-                    style={selectBox}
-                  >
-                    <option value="">(선택)</option>
-                    {materials.map((m) => (
-                      <option key={m.code} value={m.code}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={r.material ?? ""}
+                    onChange={(e) => onChangeCell(idx, "material", e.target.value)}
+                    style={{
+                      ...selectBox,
+                      border: "none",
+                      background: "transparent",
+                      width: "100%",
+                    }}
+                    placeholder="미입력"
+                  />
                 </td>
-                {/* 무게 */}
+                {/* 수량 */}
                 <td>
                   <input
                     type="number"
                     step="0.000001"
-                    value={r.weight ?? ""}
-                    onChange={(e) => onChangeCell(idx, "weight", e.target.value)}
-                    readOnly
-                    style={{ ...cellInput, textAlign: "right", paddingRight: 12 }}
+                    value={r.qty ?? ""}
+                    onChange={(e) => onChangeCell(idx, "qty", e.target.value === "" ? null : Number(e.target.value))}
+                    style={cellInput}
+                    placeholder="예: 2"
                   />
+                </td>
+                {/* 단위 */}
+                <td>
+                  <select
+                    value={r.qty_uom ?? "ea"}
+                    onChange={(e) => onChangeCell(idx, "qty_uom", e.target.value)}
+                    style={selectBox}
+                  >
+                    <option value="ea">ea</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="lb">lb</option>
+                  </select>
+                </td>
+                {/* 총질량(kg) - 읽기전용 */}
+                <td>
+                  <div style={cellReadonly}>
+                    {r.total_mass_kg != null ? Number(r.total_mass_kg).toFixed(6) : ""}
+                  </div>
                 </td>
               </tr>
             ))

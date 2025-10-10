@@ -29,7 +29,7 @@ export function Toolbar({
 
   // ✅ 재질이 모두 선택되었는지 검사 (계산된 값)
   const allMaterialsChosen = React.useMemo(() => {
-    return rows.length > 0 && rows.every((r) => !!(r.material_code && r.material_code !== ""));
+    return rows.length > 0 && rows.every((r) => !!(r.material && r.material !== ""));
   }, [rows]);
 
   // 저장 로깅 핸들러 (useCallback 적용)

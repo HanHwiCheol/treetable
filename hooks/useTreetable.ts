@@ -36,38 +36,32 @@ export function useTreetable(treetableId?: string, p0?: { ready: boolean; }) {
     [materials]
   );
 
-  const onChangeCell = (idx: number, key: keyof NodeRow, value: any) => {
-    setRows(prev => {
+  const onChangeCell = (rowIndex: number, key: keyof NodeRow, value: any) => {
+    setRows((prev) => {
       const next = [...prev];
-      const r = { ...next[idx] };
-
-      if (key === "material_code") {
-        // 재질 코드만 변경 — 중량은 손대지 않음(엑셀 값 유지)
-        r.material_code = value === "" ? null : value;
-
-        // 만약 "엑셀에 weight가 없어서 현재 weight가 빈 값(null)"이라면,
-        // 선택한 재질의 기본무게로 채우고 싶을 때만 아래 두 줄을 해제하세요.
-        // const m = materials.find(mm => mm.code === value);
-        // if (r.weight == null) r.weight = m?.weight ?? null;
-        r.updated_at = new Date().toISOString();
-      } else if (key === "revision") {
-        // 리비전이 바뀌면 재질/무게 초기화 + 수정일 갱신
-        r.revision = value === "" ? null : value;
-        r.material_code = null;    // ← "선택" 상태
-        r.weight = null;           // 재질 초기화에 맞춰 무게도 비움
-        r.updated_at = new Date().toISOString();
-      } else if (key === "weight") {
-        const n = value === "" ? null : Number(value);
-        r.weight = Number.isFinite(n as number) ? (n as number) : null;
+      const r = { ...next[rowIndex] };
+      (r as any)[key] = value;
+      // 미리보기 계산(서버와 동일 로직)
+      const uom = (r.qty_uom ?? "").toString().toLowerCase();
+      const qty = num(r.qty);
+      const mpe = num(r.mass_per_ea_kg);
+      const toKg = (val: number | null, unit: string) => {
+        if (val == null) return null;
+        if (unit === "kg") return val;
+        if (unit === "g") return val * 0.001;
+        if (unit === "lb") return val * 0.45359237;
+        return null; // ea는 여기서 환산 안 함
+      };
+      if (uom && uom !== "ea") {
+        r.total_mass_kg = toKg(qty, uom);
       } else {
-        (r as any)[key] = value === "" ? null : value;
+        r.total_mass_kg = (qty ?? 0) * (mpe ?? 0);
       }
-
-      next[idx] = r;
+      next[rowIndex] = r;
       return next;
     });
   };
-
+  
   const save = async () => {
     if (!treetableId) return;
     setSaving(true);
@@ -94,6 +88,11 @@ export function useTreetable(treetableId?: string, p0?: { ready: boolean; }) {
       setSaving(false);
     }
   };
+
+  // 수치 보정 유틸
+  const num = (v: any) => (v == null || v === "" ? null : Number(v));
+
+
 
   return {
     materials,

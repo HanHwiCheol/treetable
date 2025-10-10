@@ -57,6 +57,27 @@ export default function ReviewPage() {
       return next;
     });
 
+
+  const goToBOMTable = async () => {
+      const t0 = performance.now();
+      // ✅ 로그 기록
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s?.session?.user?.id ?? null;
+      const email = s?.session?.user?.email ?? null;
+
+      await supabase.from("usage_events").insert([{
+        user_id: uid,
+        user_email: email,
+        treetable_id: id!,           
+        step: "EBOM",
+        action: "Display EBOM Table",          
+        duration_ms: Math.round(performance.now() - t0),
+        detail: { note: "Go to LCA from review page" }
+      }]);
+
+    router.push(`/treetable/${id}`);
+  };
+
   const handleExportBom = async () => {
     const t0 = performance.now();
     try {
@@ -132,7 +153,7 @@ export default function ReviewPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <h1 style={{ margin: 0 }}>설계 검토 체크리스트</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn" onClick={() => router.push(`/treetable/${id}`)}>목록으로</button>
+          <button className="btn" onClick={goToBOMTable}>목록으로</button>
           <button className="btn" onClick={handleExportBom}>BOM 정보 추출</button>
           <button className="btn primary" onClick={handleSave}>저장하기</button>
         </div>
