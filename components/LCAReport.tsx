@@ -29,7 +29,6 @@ export default function LCAReport({ tableId }: { tableId: string }) {
   const [loading, setLoading] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { id } = router.query as { id?: string };
 
   useEffect(() => {
     (async () => {

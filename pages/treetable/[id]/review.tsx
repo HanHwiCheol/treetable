@@ -51,7 +51,8 @@ export default function ReviewPage() {
     })();
   }, [id]);
 
-  const allChecked = useMemo(() => checked.every(Boolean), [checked]);
+  //모든 체크리스트가 체크되었는지 확인하는 코드
+  //const allChecked = useMemo(() => checked.every(Boolean), [checked]);
 
   const toggle = (i: number) =>
     setChecked(prev => {
@@ -60,26 +61,26 @@ export default function ReviewPage() {
       return next;
     });
 
-  const goToBOMTable = async () => {
-    await logUsageEvent("EBOM", "Display EBOM Table", { note: "Go to LCA from review page" });
-    router.push(`/treetable/${id}`);
-  };
+  // const goToBOMTable = async () => {
+  //   await logUsageEvent("EBOM", "Display EBOM Table", { note: "Go to LCA from review page" });
+  //   router.push(`/treetable/${id}`);
+  // };
 
-  const handleExportBom = async () => {
-    try {
-      await logUsageEvent("LCA REPORT", "Display LCA report", { note: "Go to LCA from review page" });
-      // 리포트 페이지로 이동
-      router.push(`/lca/${id}`);
-    } catch (e: unknown) {
-      // 실패도 로그 남김
-      alert("LCA REPORT 표시 중 오류: " + (e instanceof Error ? e.message : "unknown"));
-    }
-  };
+  // const handleExportBom = async () => {
+  //   try {
+  //     await logUsageEvent("LCA REPORT", "Display LCA report", { note: "Go to LCA from review page" });
+  //     // 리포트 페이지로 이동
+  //     router.push(`/lca/${id}`);
+  //   } catch (e: unknown) {
+  //     // 실패도 로그 남김
+  //     alert("LCA REPORT 표시 중 오류: " + (e instanceof Error ? e.message : "unknown"));
+  //   }
+  // };
 
-  const handleEnd = async () => {
-    //모든 체크리스트가 다 체크 되었다면 프로세스를 종료하고 결과페이지를 Open한다.
-    alert("모든 체크리스트가 다 체크 되었나요? 확인 버튼을 클릭하면 제품개발 프로세스를 종료합니다.");
-  };
+  // const handleEnd = async () => {
+  //   //모든 체크리스트가 다 체크 되었다면 프로세스를 종료하고 결과페이지를 Open한다.
+  //   alert("모든 체크리스트가 다 체크 되었나요? 확인 버튼을 클릭하면 제품개발 프로세스를 종료합니다.");
+  // };
 
   const handleNextProcess = async () => {
     await logUsageEvent("STAGE Change", "Going to Testing/Prototype Stage", { note: "Testing/Prototype Stage" });
@@ -87,8 +88,6 @@ export default function ReviewPage() {
   };
 
   const handleSave = async () => {
-    const t0 = performance.now();
-
     try {
       await saveReview(id!, {
         items: CHECK_ITEMS.map((label, i) => ({ label, checked: checked[i] })),

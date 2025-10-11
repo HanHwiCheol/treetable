@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { Material, NodeRow } from "@/types/treetable";
+import { NodeRow } from "@/types/treetable";
 import { indentStyle } from "@/utils/tree";
 
 const formatDate = (v?: string | null) =>

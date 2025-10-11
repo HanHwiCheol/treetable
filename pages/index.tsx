@@ -120,7 +120,7 @@ export default function Home() {
         detail: { note: "User clicked logout" }
       }]);
 
-      // ✅ 로그 남긴 후 실제 로그아웃 수행
+      // 로그 남긴 후 실제 로그아웃 수행
       await supabase.auth.signOut();
 
       alert("로그아웃 완료");
@@ -137,13 +137,17 @@ export default function Home() {
     try {
       // 1️⃣ 기존 로직
       const { data, error } = await supabase.rpc("create_treetable", { p_name: name });
+      if (error) throw error;
+      if (!data) throw new Error("데이터 생성 실패");
+
       await logUsageEvent("EBOM", "EBOM Table create", { note: "EBOM Table create by user" });
+      router.push(`/treetable/${data.id}`);
       // 3️⃣ 다음 페이지 이동
       router.push(`/treetable/${data.id}`);
     } catch (e: unknown) {
       if (e instanceof Error) {
         alert("생성 중 오류: " + (e?.message ?? "unknown"));
-      }else{
+      } else {
         alert("생성 중 알 수 없는 오류 발생");
       }
     }
@@ -189,8 +193,8 @@ export default function Home() {
       alert("삭제되었습니다.");
     } catch (e: unknown) {
       if (e instanceof Error) {
-        alert("삭제 중 오류: " + (e?.message ?? "unknown"))
-      }else{
+        alert("삭제 중 오류: " + e.message);
+      } else {
         alert("삭제 중 알 수 없는 오류 발생");
       }
     };
