@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { useRouter } from "next/router";
 import { logUsageEvent } from "@/utils/logUsageEvent";
+import type { Payload } from "recharts/types/component/DefaultTooltipContent";
 
 type Item = {
   material: string;
@@ -20,6 +21,14 @@ type Resp = {
   tableId: string;
   totals: { mass_kg: number; carbon_kgco2e: number };
   items: Item[];
+};
+type TooltipPayload = {
+  pct: number;
+  name: string;
+  value: number;
+};
+type TooltipProps = {
+  payload: TooltipPayload;
 };
 
 
@@ -152,11 +161,11 @@ export default function LCAReport({ tableId }: { tableId: string }) {
               {pieData.map((_e, i) => <Cell key={i} />)}
             </Pie>
             <ReTooltip
-              formatter={(value: number, name: string, props: any) => {
-                const payload = props.payload as { pct: number; name: string };
+              formatter={(value: number, name: string, props: Payload<number, string>) => {
+                const payload = props.payload as { pct: number; name: string; value: number };
                 return [`${value} kgCO₂e (${payload.pct.toFixed(2)}%)`, payload.name];
               }}
-            />F
+            />
             <Legend />
           </PieChart>
         </div>

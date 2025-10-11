@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { saveReview, fetchReview } from "@/services/treetableService";
 import { logUsageEvent } from "@/utils/logUsageEvent";
 
