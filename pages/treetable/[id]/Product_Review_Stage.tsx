@@ -11,8 +11,12 @@ const ProductReviewStage = () => {
             await logUsageEvent("LCA REPORT", "Display LCA report", { note: "Go to LCA from review page" });
             // 리포트 페이지로 이동
             router.push(`/lca/${id}`);
-        } catch (e: any) {
-            alert("LCA REPORT 표시 중 오류: " + (e?.message ?? "unknown"));
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                alert("CA REPORT 표시 중 오류 : " + (e?.message ?? "unknown"))
+            } else {
+                alert("CA REPORT 표시 중 알 수 없는 오류 발생");
+            }
         }
     };
 

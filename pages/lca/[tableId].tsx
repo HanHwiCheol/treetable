@@ -1,14 +1,17 @@
-// pages/lca/[tableId].tsx
 import dynamic from "next/dynamic";
 
 const LCAReport = dynamic(() => import("../../components/LCAReport"), { ssr: false });
 
-export default function LcaPage({ query }: any) {
-  // pages 라우터에서 getInitialProps 없이도 아래처럼 처리 가능(단, 클라 사이드에서만 사용)
-  const tableId =
+interface LcaPageProps {
+  query: Record<string, string | string[]>; // query의 타입을 구체화
+}
+
+export default function LcaPage({ query }: LcaPageProps) {
+  // query?.tableId가 배열일 경우 첫 번째 값만 사용
+  const tableId = 
     typeof window !== "undefined"
       ? decodeURIComponent(window.location.pathname.split("/").pop() || "")
-      : (query?.tableId ?? "");
+      : (Array.isArray(query?.tableId) ? query?.tableId[0] : query?.tableId) ?? "";
 
   return (
     <main>

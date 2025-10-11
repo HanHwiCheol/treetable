@@ -1,8 +1,12 @@
-// pages/treetable/[id]/review.tsx
 import { useRouter } from "next/router";
 import { useMemo, useState, useEffect } from "react";
 import { saveReview, fetchReview } from "@/services/treetableService";
 import { logUsageEvent } from "@/utils/logUsageEvent";
+
+interface ReviewItem {
+  label: string;
+  checked: boolean;
+}
 
 const CHECK_ITEMS = [
   "주요 부품에 재질(Material)과 표면처리(Surface Treatment)가 정확히 지정되어 있는가?",
@@ -16,7 +20,6 @@ const CHECK_ITEMS = [
   "메타데이터(부품번호, 이름, 주요속성)가 정확히 입력되어 있는가?",
   "EBOM이 요구사항(시험 장치, 안전 커버, 환경 조건 등)을 충족하며, 누락된 부품은 없는가?",
 ];
-
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -34,16 +37,16 @@ export default function ReviewPage() {
     (async () => {
       try {
         const saved = await fetchReview(id);
-        // saved 형태 예: { items: [{label: string, checked: boolean}, ...] }
+        // saved 형태: { items: ReviewItem[] }
         if (saved?.items?.length) {
           const map = CHECK_ITEMS.map(lbl => {
-            const hit = saved.items.find((it: any) => it.label === lbl);
+            const hit = saved.items.find((it: ReviewItem) => it.label === lbl);
             return !!hit?.checked;
           });
           setChecked(map);
         }
-      } catch (e: any) {
-        console.error("failed to load review:", e?.message ?? e);
+      } catch (e: unknown) {
+        console.error("failed to load review:", e instanceof Error ? e.message : e);
       }
     })();
   }, [id]);
@@ -57,7 +60,6 @@ export default function ReviewPage() {
       return next;
     });
 
-
   const goToBOMTable = async () => {
     await logUsageEvent("EBOM", "Display EBOM Table", { note: "Go to LCA from review page" });
     router.push(`/treetable/${id}`);
@@ -68,21 +70,21 @@ export default function ReviewPage() {
       await logUsageEvent("LCA REPORT", "Display LCA report", { note: "Go to LCA from review page" });
       // 리포트 페이지로 이동
       router.push(`/lca/${id}`);
-    } catch (e: any) {
+    } catch (e: unknown) {
       // 실패도 로그 남김
-      alert("LCA REPORT 표시 중 오류: " + (e?.message ?? "unknown"));
+      alert("LCA REPORT 표시 중 오류: " + (e instanceof Error ? e.message : "unknown"));
     }
   };
 
   const handleEnd = async () => {
     //모든 체크리스트가 다 체크 되었다면 프로세스를 종료하고 결과페이지를 Open한다.
     alert("모든 체크리스트가 다 체크 되었나요? 확인 버튼을 클릭하면 제품개발 프로세스를 종료합니다.");
-  }
+  };
 
   const handleNextProcess = async () => {
     await logUsageEvent("STAGE Change", "Going to Testing/Prototype Stage", { note: "Testing/Prototype Stage" });
     router.push(`/treetable/${id}/Testing_Prototype_Stage`);
-  }
+  };
 
   const handleSave = async () => {
     const t0 = performance.now();
@@ -102,7 +104,7 @@ export default function ReviewPage() {
   const handleBack = async () => {
     await logUsageEvent("EBOM", "Get back to EBOM Table", { note: "EBOM Table View" });
     router.push(`/treetable/${id}`);  // 예: 이전 페이지로 돌아가기
-  }
+  };
 
   return (
     <div style={{ padding: 16 }}>

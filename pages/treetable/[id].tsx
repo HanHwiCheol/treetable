@@ -9,10 +9,11 @@ import { rowsFromXlsx } from "@/utils/xlsx";
 import { NodeRow } from "@/types/treetable";
 import { supabase } from "@/lib/supabaseClient";
 import { logUsageEvent } from "@/utils/logUsageEvent";  
+import { Session } from "@supabase/supabase-js"; // Supabase SDK에서 제공하는 Session 타입
 
 export default function TreetableDetail() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null); // session의 타입을 Session | null로 변경
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -23,7 +24,7 @@ export default function TreetableDetail() {
   }, []);
 
   const { id } = router.query;
-  const treetable_id = Array.isArray(id) ? id[0] : id;
+  const treetable_id = Array.isArray(id) ? id[0] : id; // treetable_id는 string | undefined이므로 타입을 처리
 
   const {
     materials,            // ✅ 훅에서 받아온다
@@ -31,7 +32,7 @@ export default function TreetableDetail() {
     loading, saving,
     importMode, setImportMode,
     onChangeCell, save,
-  } = useTreetable(treetable_id, { ready: !!session });
+  } = useTreetable(treetable_id as string, { ready: !!session });
 
   const onFile = async (file: File) => {
     if (!treetable_id) return;

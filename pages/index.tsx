@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
 import AuthForm from "../components/AuthForm";
 import TableSelector from "../components/TableSelector";
-import { logUsageEvent } from "@/utils/logUsageEvent";  
+import { logUsageEvent } from "@/utils/logUsageEvent";
 
 import {
   btnGhost,
@@ -93,8 +93,12 @@ export default function Home() {
         return;
       }
       alert("로그인 성공");
-    } catch (e: any) {
-      alert("로그인 중 오류: " + (e?.message ?? "unknown"));
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert("로그인 중 오류: " + e.message);
+      } else {
+        alert("로그인 중 알 수 없는 오류 발생");
+      }
     }
   };
 
@@ -120,7 +124,7 @@ export default function Home() {
       await supabase.auth.signOut();
 
       alert("로그아웃 완료");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("로그아웃 중 오류:", e);
     }
   };
@@ -129,22 +133,26 @@ export default function Home() {
   const handleCreate = async () => {
     const name = prompt("새 TreeTable 이름을 입력:");
     if (!name) return;
- 
+
     try {
       // 1️⃣ 기존 로직
       const { data, error } = await supabase.rpc("create_treetable", { p_name: name });
       await logUsageEvent("EBOM", "EBOM Table create", { note: "EBOM Table create by user" });
       // 3️⃣ 다음 페이지 이동
       router.push(`/treetable/${data.id}`);
-    } catch (e: any) {
-      alert("생성 중 오류: " + (e?.message ?? "unknown"));
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert("생성 중 오류: " + (e?.message ?? "unknown"));
+      }else{
+        alert("생성 중 알 수 없는 오류 발생");
+      }
     }
   };
 
   const handleOpen = async () => {
     if (!selectedId) return;
-      await logUsageEvent("EBOM", "EBOM Table Open", { note: "TreeTable opened by user" });
-      router.push(`/treetable/${selectedId}`);
+    await logUsageEvent("EBOM", "EBOM Table Open", { note: "TreeTable opened by user" });
+    router.push(`/treetable/${selectedId}`);
   };
 
   const handleDelete = async () => {
@@ -179,9 +187,13 @@ export default function Home() {
 
       await logUsageEvent("EBOM", "EBOM Table Delete", { note: "EBOM Table delete by user" });
       alert("삭제되었습니다.");
-    } catch (e: any) {
-      alert("삭제 중 오류: " + (e?.message ?? "unknown"));
-    }
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert("삭제 중 오류: " + (e?.message ?? "unknown"))
+      }else{
+        alert("삭제 중 알 수 없는 오류 발생");
+      }
+    };
   };
 
   const handleSelect = (id: string) => {
