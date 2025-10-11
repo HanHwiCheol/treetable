@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import { NodeRow } from "@/types/treetable";
+import { Material, NodeRow } from "@/types/treetable";
 import { indentStyle } from "@/utils/tree";
 
 const formatDate = (v?: string | null) =>
@@ -16,9 +16,11 @@ const formatDate = (v?: string | null) =>
 export function TreeGrid({
   rows,
   onChangeCell,
+  materials,
 }: {
   rows: NodeRow[];
   onChangeCell: (idx: number, key: keyof NodeRow, value: string | number | null) => void;
+  materials: Material[];
 }) {
   return (
     <div style={wrap}>
