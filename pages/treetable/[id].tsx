@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
+import type { Session } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 import { useTreetable } from "@/hooks/useTreetable";
 import { Toolbar } from "@/components/treetable/Toolbar";
@@ -12,7 +13,7 @@ import { logUsageEvent } from "@/utils/logUsageEvent";
 
 export default function TreetableDetail() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));

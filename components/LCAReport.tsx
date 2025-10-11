@@ -22,15 +22,6 @@ type Resp = {
   totals: { mass_kg: number; carbon_kgco2e: number };
   items: Item[];
 };
-type TooltipPayload = {
-  pct: number;
-  name: string;
-  value: number;
-};
-type TooltipProps = {
-  payload: TooltipPayload;
-};
-
 
 export default function LCAReport({ tableId }: { tableId: string }) {
   const [data, setData] = useState<Resp | null>(null);
