@@ -37,8 +37,11 @@ export default function LCAReport({ tableId }: { tableId: string }) {
         const r = await fetch(`/api/reports/${encodeURIComponent(tableId)}`, { cache: "no-store" });
         if (!r.ok) throw new Error(await r.text());
         setData(await r.json());
-      } catch (e: any) {
-        setErr(e?.message ?? "fetch error");
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          setErr(e?.message ?? "fetch error");
+        }
+
       } finally {
         setLoading(false);
       }
@@ -136,7 +139,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
           </div>
         </div>
         <div className="print-hide" style={{ display: "flex", gap: 8 }}>
-          <button onClick={handleBack}>이전으로</button> 
+          <button onClick={handleBack}>이전으로</button>
           <button onClick={handleCSV}>CSV</button>
           <button onClick={handlePrint}>인쇄/PDF</button>
         </div>
@@ -149,7 +152,12 @@ export default function LCAReport({ tableId }: { tableId: string }) {
             <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} label>
               {pieData.map((_e, i) => <Cell key={i} />)}
             </Pie>
-            <ReTooltip formatter={(v: any, _n, p: any) => [`${v} kgCO₂e (${p.payload.pct.toFixed(2)}%)`, p.payload.name]} />
+            <ReTooltip
+              formatter={(value: number, name: string, props: any) => {
+                const payload = props.payload as { pct: number; name: string };
+                return [`${value} kgCO₂e (${payload.pct.toFixed(2)}%)`, payload.name];
+              }}
+            />F
             <Legend />
           </PieChart>
         </div>
@@ -160,7 +168,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="material" />
             <YAxis />
-            <ReTooltip formatter={(v: any, n: any) => {
+            <ReTooltip formatter={(v: number, n: string) => {
               return n === "중량(kg)" ? [`${v} kg`, "중량"] : [`${v} kgCO₂e`, "탄소"];
             }} />
             <Legend />

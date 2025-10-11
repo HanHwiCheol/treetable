@@ -16,11 +16,9 @@ const formatDate = (v?: string | null) =>
 export function TreeGrid({
   rows,
   onChangeCell,
-  materials,
 }: {
   rows: NodeRow[];
   onChangeCell: (idx: number, key: keyof NodeRow, value: string | number | null) => void;
-  materials: Material[];
 }) {
   return (
     <div style={wrap}>

@@ -41,8 +41,9 @@ export function Toolbar({
     try {
       await onSave();     // 원래 저장 실행
       ok = true;
-    } catch (e: any) {
-      errMsg = e?.message ?? String(e);
+    } catch (e: unknown) {
+      if (e instanceof Error)
+        errMsg = e?.message ?? String(e);
     } finally {
       // usage_events 로깅 (treetable_id 없으면 스킵)
       try {
