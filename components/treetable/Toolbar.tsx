@@ -2,6 +2,7 @@ import { CSSProperties, useCallback } from "react";
 import { useRouter } from "next/router";
 import { NodeRow } from "@/types/treetable";
 import { supabase } from "@/lib/supabaseClient";
+import { logUsageEvent } from "@/utils/logUsageEvent";
 import React from "react";
 
 interface ToolbarProps {
@@ -26,6 +27,15 @@ export function Toolbar({
   treetable_id,
 }: ToolbarProps) {
   const router = useRouter();
+
+  // CATIA 진행 상태 (버튼 라벨/스타일 토글용)
+  const [catiaInProgress, setCatiaInProgress] = React.useState(false);
+
+  // 새로고침 후에도 유지되도록 로컬스토리지에서 초기화
+  React.useEffect(() => {
+    const startedAt = localStorage.getItem("catiaStartAt");
+    setCatiaInProgress(!!startedAt);
+  }, []);
 
   // ✅ 재질이 모두 선택되었는지 검사 (계산된 값)
   const allMaterialsChosen = React.useMemo(() => {
@@ -104,30 +114,31 @@ export function Toolbar({
   };
 
   // CATIA 작업 시작 핸들러 (useCallback 적용)
-  const handleCatiaStartClick = useCallback(async () => {
-    const startAt = new Date().toISOString();
+  const handleCatiaClick = React.useCallback(async () => {
     const { data: s, error: sErr } = await supabase.auth.getSession();
     if (sErr || !s.session) { alert("로그인 세션 없음"); return; }
 
-    const email = s.session?.user?.email ?? null;
-    const uid = s.session?.user?.id ?? null;
-
-    localStorage.setItem("prepStartAt", startAt);
-    const { error } = await supabase.from("usage_events").insert([{
-      user_id: uid,
-      user_email: email,
-      step: "CATIA",
-      action: "Starting CATIA work",
-      detail: { source: "CATIA", note: "user marked start" },
-      treetable_id
-    }]);
-    if (error) {
-      alert("usage_events insert 실패: " + error.message);
-      console.error(error);
+    // 아직 시작 안된 상태 → 시작 처리
+    if (!catiaInProgress) {
+      const startAt = new Date().toISOString();
+      localStorage.setItem("catiaStartAt", startAt);
+      await logUsageEvent("CATIA", "Starting CATIA work", { source: "CATIA", note: "user marked complete", startAt });
+      setCatiaInProgress(true);
+      alert("CATIA 작업이 진행됩니다.");
       return;
     }
-    alert("CATIA 작업 시작을 기록했습니다.");
-  }, [treetable_id]);  // Dependencies 명시
+
+    // 이미 진행 중 → 완료 처리
+    const startAt = localStorage.getItem("catiaStartAt");
+    const doneAt = new Date().toISOString();
+    const durationMs = startAt ? (new Date(doneAt).getTime() - new Date(startAt).getTime()) : null;
+    await logUsageEvent("CATIA", "Completed CATIA work", { source: "CATIA", note: "user marked complete", startAt, doneAt, durationMs });
+
+    localStorage.removeItem("catiaStartAt");
+    setCatiaInProgress(false);
+    alert("CATIA 작업이 완료되었습니다.");
+  }, [treetable_id, catiaInProgress]);
+
 
   // 파일 선택 핸들러 (useCallback 적용)
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,11 +170,17 @@ export function Toolbar({
 
       {/* 오른쪽: 목록으로 | 저장하기(흰색) | 다음단계(흰색, 조건부 활성화) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-        <button style={btnCatia} className="btn" onClick={handleCatiaStartClick}>CATIA 작업</button>
+        <button
+          style={{ ...btnCatia, background: catiaInProgress ? "#f59e0b" : "#0052f7", color: "#fff" }}
+          className="btn"
+          onClick={handleCatiaClick}
+        >
+          {catiaInProgress ? "CATIA 작업 중" : "CATIA 작업"}
+        </button>
         <button onClick={handleSaveClick} disabled={saving} style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}>{saving ? "저장 중..." : "저장하기"}</button>
         <span style={{ margin: "0 8px" }}>|</span>  {/* 구분자 */}
         <button onClick={onBack} style={btnGhost}>이전단계</button>
-        <button onClick={handleNextStepClick} disabled={!rows.length || !allMaterialsChosen}  style={{...btnGhost, opacity: rows.length && allMaterialsChosen ? 1 : 0.5,cursor: rows.length && allMaterialsChosen ? "pointer" : "not-allowed",}}>다음단계</button>
+        <button onClick={handleNextStepClick} disabled={!rows.length || !allMaterialsChosen} style={{ ...btnGhost, opacity: rows.length && allMaterialsChosen ? 1 : 0.5, cursor: rows.length && allMaterialsChosen ? "pointer" : "not-allowed", }}>다음단계</button>
       </div>
     </div>
   );
