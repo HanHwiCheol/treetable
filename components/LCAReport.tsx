@@ -190,8 +190,7 @@ export default function LCAReport({ tableId }: { tableId: string }) {
         <h3 style={{ marginTop: 0 }}>해석 노트</h3>
         <ul style={{ marginTop: 8 }}>
           <li>재질별 탄소(kgCO₂e)는 <code>총질량(kg) × 배출계수(kgCO₂e/kg)</code>로 계산.</li>
-          <li>엄밀한 LCA에는 공정/에너지/수송 등 LCI 매핑이 추가로 필요.</li>
-          <li>필요 시 어셈블리/그룹 단위 비교(베이스라인 vs 개선안)로 확장 가능.</li>
+          <li>작년 모델별 총 탄소량 1.5 kgCO₂e</li>
         </ul>
       </section>
 
