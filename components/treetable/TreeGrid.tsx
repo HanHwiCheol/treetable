@@ -27,29 +27,29 @@ export function TreeGrid({
       <table style={table}>
         {/* ✅ 고정 컬럼폭 지정 */}
         <colgroup>
-          <col style={{ width: 100 }} /> {/* 라인번호 */}
+          <col style={{ width: 80 }} /> {/* 라인번호 */}
           <col style={{ width: 140 }} /> {/* 품번 */}
-          <col style={{ width: 80 }} />  {/* 리비전 */}
+          <col style={{ width: 30 }} />  {/* 리비전 */}
           <col style={{ width: 200 }} /> {/* 이름 */}
           <col style={{ width: 140 }} /> {/* 생성일 */}
           <col style={{ width: 140 }} /> {/* 수정일 */}
-          <col style={{ width: 180 }} /> {/* 재질 */}
-          <col style={{ width: 40 }} /> {/* 수량 */}
+          <col style={{ width: 80 }} /> {/* 재질 */}
+          <col style={{ width: 50 }} /> {/* 수량 */}
           <col style={{ width: 40 }} />  {/* 단위 */}
           <col style={{ width: 100 }} /> {/* 총질량(kg) */}
         </colgroup>
         <thead style={thead}>
           <tr>
-            <th>라인번호</th>
-            <th>품번</th>
-            <th>리비전</th>
-            <th>이름</th>
-            <th>생성일</th>
-            <th>수정일</th>
-            <th>재질</th>
-            <th>수량</th>
-            <th>단위</th>
-            <th>총질량(kg)</th>
+            <th>No</th>
+            <th>P/N</th>
+            <th>Rev</th>
+            <th>Name</th>
+            <th>Create Date</th>
+            <th>Modify Date</th>
+            <th>Material</th>
+            <th>QTY</th>
+            <th>Unit</th>
+            <th>Total Mass(kg)</th>
           </tr>
         </thead>
         <tbody>

@@ -1,21 +1,20 @@
-import dynamic from "next/dynamic";
+// pages/lca/[tableId].tsx
 
-const LCAReport = dynamic(() => import("../../components/LCAReport"), { ssr: false });
+import { useRouter } from "next/router";
+import LCAReport from "@/components/LCAReport";
 
-interface LcaPageProps {
-  query: Record<string, string | string[]>; // query의 타입을 구체화
-}
+export default function LCAPage() {
+  const router = useRouter();
+  const { tableId } = router.query;
 
-export default function LcaPage({ query }: LcaPageProps) {
-  // query?.tableId가 배열일 경우 첫 번째 값만 사용
-  const tableId = 
-    typeof window !== "undefined"
-      ? decodeURIComponent(window.location.pathname.split("/").pop() || "")
-      : (Array.isArray(query?.tableId) ? query?.tableId[0] : query?.tableId) ?? "";
+  // tableId 준비될 때까지 로딩 화면
+  if (!tableId || typeof tableId !== "string") {
+    return (
+      <div style={{ padding: 20, fontSize: 18 }}>
+        LCA 보고서를 불러오는 중입니다...
+      </div>
+    );
+  }
 
-  return (
-    <main>
-      <LCAReport tableId={tableId} />
-    </main>
-  );
+  return <LCAReport tableId={tableId} />;
 }

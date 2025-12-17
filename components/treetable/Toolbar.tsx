@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { NodeRow } from "@/types/treetable";
 import { supabase } from "@/lib/supabaseClient";
 import { logUsageEvent } from "@/utils/logUsageEvent";
+import { useScenarioStore } from "@/hooks/useScenarioStore";
 import React from "react";
 
 interface ToolbarProps {
@@ -28,6 +29,24 @@ export function Toolbar({
 }: ToolbarProps) {
   const router = useRouter();
 
+  // 
+  // 시스템의 탄소배출량 기준을 scenario 별 가져오기
+  const scenario = useScenarioStore((s) => s.scenario) as
+    | "material-change"
+    | "size-change"
+    | "structure-change"
+    | null;
+
+  const thresholds = {
+    "material-change": 4.37,
+    "size-change": 19.78,
+    "structure-change": 36.25,
+  } as const;
+
+  // scenario 값 없을 때 fallback = 1.5
+  const threshold =
+    scenario && thresholds[scenario] ? thresholds[scenario] : 1.5;
+
   // CATIA 진행 상태 (버튼 라벨/스타일 토글용)
   const [catiaInProgress, setCatiaInProgress] = React.useState(false);
 
@@ -37,9 +56,9 @@ export function Toolbar({
     setCatiaInProgress(!!startedAt);
   }, []);
 
-  // ✅ 재질이 모두 선택되었는지 검사 (계산된 값)
-  const allMaterialsChosen = React.useMemo(() => {
-    return rows.length > 0 && rows.every((r) => !!(r.material && r.material !== ""));
+  // ✅ 총질량이 모두 선택되었는지 검사 (계산된 값)
+  const alltotal_mass_kg_Insert = React.useMemo(() => {
+    return rows.length > 0 && rows.every((r) => !!(r.total_mass_kg));
   }, [rows]);
 
   // 저장 로깅 핸들러 (useCallback 적용)
@@ -56,62 +75,78 @@ export function Toolbar({
         errMsg = e?.message ?? String(e);
     } finally {
       // usage_events 로깅 (treetable_id 없으면 스킵)
-      try {
-        const { data: s } = await supabase.auth.getSession();
-        const uid = s?.session?.user?.id ?? null;
-        const email = s?.session?.user?.email ?? null;
+      if (treetable_id) {
+        try {
+          // 성공적인 저장 후 로깅
+          await logUsageEvent(scenario ?? "unknown", "EBOM Save", { note: "EBOM Table Save to DB" });
 
-        if (treetable_id) {
-          await supabase.from("usage_events").insert([{
-            user_id: uid,
-            user_email: email,
-            treetable_id,
-            step: "EBOM",
-            action: ok ? "EBOM Save" : "error",
-            duration_ms: Math.round(performance.now() - t0),
-            detail: ok
-              ? { note: "treetable save", rowCount: rows?.length ?? null }
-              : { note: "treetable save error", message: errMsg }
-          }]);
+          if (!ok) {
+            alert(errMsg ?? "저장 중 오류");
+          }
+        } catch (err) {
+          console.error("Error logging usage event:", err);
+          alert("저장 로깅 중 오류 발생");
         }
-      } catch (logErr) {
-        console.error("usage_events insert 실패:", logErr);
       }
-    }
-
-    if (!ok) {
-      alert(errMsg ?? "저장 중 오류");
     }
   }, [onSave, rows, treetable_id]);  // Dependencies 명시
 
-  // Toolbar 컴포넌트 내부에 추가
-  const handleNextStepClick = async () => {
-    if (!rows.length || !allMaterialsChosen) return;
-
-    const t0 = performance.now();
-
+  const handleExportBom = async () => {
     try {
-      const { data: s } = await supabase.auth.getSession();
-      const uid = s?.session?.user?.id ?? null;
-      const email = s?.session?.user?.email ?? null;
-
-      // ✅ 로그 기록
-      await supabase.from("usage_events").insert([{
-        user_id: uid,
-        user_email: email,
-        treetable_id,                     // DB 컬럼은 snake_case로!
-        step: "REVIEW",
-        action: "Starting the EBOM data review.",
-        duration_ms: Math.round(performance.now() - t0),
-        detail: { note: "User moved to review page from BOM table" },
-      }]);
-
-      // ✅ 페이지 이동
-      router.push(`/treetable/${treetable_id}/review`);
-    } catch (err) {
-      console.error("usage_events insert 실패:", err);
+      await logUsageEvent(scenario ?? "unknown", "Display LCA report", { note: "Go to LCA from review page" });
+      // 리포트 페이지로 이동
+      router.push(`/lca/${treetable_id}`);
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert("CA REPORT 표시 중 오류 : " + (e?.message ?? "unknown"))
+      } else {
+        alert("CA REPORT 표시 중 알 수 없는 오류 발생");
+      }
     }
   };
+
+  const handleCompleteClick = async () => {
+    if (!treetable_id) {
+      alert("테이블 ID가 없습니다. 저장 또는 리포트 생성 후 다시 시도하세요.");
+      return;
+    }
+
+    try {
+      // DB에서 EBOM 총탄소 조회
+      const r = await fetch(`/api/reports/${encodeURIComponent(treetable_id)}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(await r.text());
+      const data = await r.json() as { totals?: { carbon_kgco2e?: number } };
+      const total = Number(data?.totals?.carbon_kgco2e ?? 0);
+
+      // 최신 threshold 사용
+      const lower = threshold * 0.9;
+      const upper = threshold * 1.1;
+
+      if (total < lower || total > upper) {
+        alert(
+          `총 탄소: ${total.toFixed(6)} kgCO₂e\n` +
+          `→ 탄소 목표량 (${threshold} kgCO₂e)의 100 ~ 90% 범위를 벗어났습니다. 완료할 수 없습니다.`
+        );
+        return;
+      }
+
+      // 완료 처리
+      await logUsageEvent(scenario ?? "unknown", "Complete Detailed Design Stage", {
+        tableId: treetable_id,
+        total_carbon_kgco2e: Number(total.toFixed(6)),
+        threshold_kgco2e: threshold
+      });
+
+      localStorage.setItem(`ebomComplete:${treetable_id}`, new Date().toISOString());
+      alert("완료되었습니다. 다른 시나리오로 이동합니다.");
+      // ⭐ 여기 추가 → 완료 후 시나리오 선택 페이지로 이동
+      router.push("/scenario");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert("완료 검증 중 오류: " + msg);
+    }
+  };
+
 
   // CATIA 작업 시작 핸들러 (useCallback 적용)
   const handleCatiaClick = React.useCallback(async () => {
@@ -122,9 +157,9 @@ export function Toolbar({
     if (!catiaInProgress) {
       const startAt = new Date().toISOString();
       localStorage.setItem("catiaStartAt", startAt);
-      await logUsageEvent("CATIA", "Starting CATIA work", { source: "CATIA", note: "user marked complete", startAt });
+      await logUsageEvent(scenario ?? "unknown", "Starting CAD work", { source: "CAD", note: "user marked complete", startAt });
       setCatiaInProgress(true);
-      alert("CATIA 작업이 진행됩니다.");
+      alert("CAD 작업이 진행됩니다.");
       return;
     }
 
@@ -132,19 +167,38 @@ export function Toolbar({
     const startAt = localStorage.getItem("catiaStartAt");
     const doneAt = new Date().toISOString();
     const durationMs = startAt ? (new Date(doneAt).getTime() - new Date(startAt).getTime()) : null;
-    await logUsageEvent("CATIA", "Completed CATIA work", { source: "CATIA", note: "user marked complete", startAt, doneAt, durationMs });
+    await logUsageEvent(scenario ?? "unknown", "Completed CAD work", { source: "CAD", note: "user marked complete", startAt, doneAt, durationMs });
 
     localStorage.removeItem("catiaStartAt");
     setCatiaInProgress(false);
-    alert("CATIA 작업이 완료되었습니다.");
+    alert("CAD 작업이 완료되었습니다.");
   }, [treetable_id, catiaInProgress]);
 
 
   // 파일 선택 핸들러 (useCallback 적용)
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onFile(file);
-  }, [onFile]);  // ✅ onFile dependency 추가
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // 1) 파일 처리
+    await onFile(file);
+
+    // // 2) 저장 자동 실행
+    // try {
+    //   await onSave();
+    //   await logUsageEvent("EBOM", "EBOM Save (Auto after Import)", {
+    //     note: "Excel import → auto save"
+    //   });
+    //   alert("엑셀 Import 후 자동 저장 완료");
+    // } catch (err) {
+    //   alert("자동 저장 중 오류 발생: " + (err instanceof Error ? err.message : String(err)));
+    // }
+
+    // 3) 같은 파일명을 다시 선택해도 onChange가 발생하도록 value 초기화
+    input.value = "";
+  }, [onFile, onSave]);
+
 
   return (
     <div style={bar}>
@@ -175,12 +229,11 @@ export function Toolbar({
           className="btn"
           onClick={handleCatiaClick}
         >
-          {catiaInProgress ? "CATIA 작업 중" : "CATIA 작업"}
+          {catiaInProgress ? "CAD 작업 중" : "CAD 작업"}
         </button>
-        <button onClick={handleSaveClick} disabled={saving} style={{ ...btnGhost, opacity: saving ? 0.6 : 1 }}>{saving ? "저장 중..." : "저장하기"}</button>
         <span style={{ margin: "0 8px" }}>|</span>  {/* 구분자 */}
-        <button onClick={onBack} style={btnGhost}>이전단계</button>
-        <button onClick={handleNextStepClick} disabled={!rows.length || !allMaterialsChosen} style={{ ...btnGhost, opacity: rows.length && allMaterialsChosen ? 1 : 0.5, cursor: rows.length && allMaterialsChosen ? "pointer" : "not-allowed", }}>다음단계</button>
+        <button onClick={handleExportBom} disabled={!rows.length || !alltotal_mass_kg_Insert} style={{ ...btnGhost, opacity: rows.length && alltotal_mass_kg_Insert ? 1 : 0.5, cursor: rows.length && alltotal_mass_kg_Insert ? "pointer" : "not-allowed", }}>LCA Report</button>
+        <button onClick={handleCompleteClick} disabled={!rows.length || !alltotal_mass_kg_Insert} style={{ ...btnGhost, opacity: rows.length && alltotal_mass_kg_Insert ? 1 : 0.5, cursor: rows.length && alltotal_mass_kg_Insert ? "pointer" : "not-allowed" }}>완료</button>
       </div>
     </div>
   );
